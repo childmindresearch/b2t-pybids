@@ -31,9 +31,10 @@ def _export_html_wasm(
 
     # Use static HTML export - notebooks run during build with real dataset
     # Use uv run to execute in project environment with all dependencies
-    cmd: List[str] = ["uv", "run", "marimo", "export", "html", "--include-code"]
+    # No code view - show clean app interface
+    cmd: List[str] = ["uv", "run", "marimo", "export", "html", "--no-include-code"]
 
-    logger.info(f"Exporting {notebook_path} to {output_path} as static HTML")
+    logger.info(f"Exporting {notebook_path} to {output_path} as static HTML (code hidden)")
 
     try:
         output_file: Path = output_dir / notebook_path.with_suffix(".html")
@@ -99,6 +100,16 @@ def _export(folder: Path, output_dir: Path, as_app: bool = False) -> List[dict]:
     if not notebooks:
         logger.warning(f"No notebooks found in {folder}!")
         return []
+
+    # Sort notebooks with migration_comparison first, then alphabetically
+    def sort_key(nb: Path) -> tuple:
+        name = nb.stem
+        if name == "migration_comparison":
+            return (0, name)  # First
+        else:
+            return (1, name)  # Alphabetical after
+
+    notebooks = sorted(notebooks, key=sort_key)
 
     notebook_data = [
         {
