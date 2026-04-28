@@ -38,18 +38,9 @@ def _():
     import warnings
     warnings.filterwarnings('ignore')
 
-    # Detect WASM/Pyodide environment and set dataset path accordingly
-    def get_dataset_path():
-        try:
-            import js  # Only available in Pyodide/WASM
-            # Running in browser - dataset served at ./data/ds114/
-            return Path("./data/ds114")
-        except ImportError:
-            # Running locally - use relative path
-            repo_root = Path.cwd().parent if Path.cwd().name == 'examples' else Path.cwd()
-            return repo_root / 'datasets' / 'bids-examples' / 'ds114'
-
-    dataset_path = get_dataset_path()
+    # Find test dataset
+    repo_root = Path.cwd().parent if Path.cwd().name == 'examples' else Path.cwd()
+    dataset_path = repo_root / 'datasets' / 'bids-examples' / 'ds114'
 
     if not dataset_path.exists():
         raise RuntimeError(f"⚠️ Dataset not found: {dataset_path}")
@@ -688,7 +679,7 @@ def _(mo):
 
 
 @app.cell
-def _(mo, pybids_layout):
+def _(mo):
     mo.md("### Approach 1: PyBIDS")
 
     # PyBIDS doesn't have a built-in method for custom entities
@@ -807,7 +798,7 @@ def _(mo):
 
 
 @app.cell
-def _(mo, pybids_layout):
+def _(mo):
     mo.md("### Approach 1: PyBIDS")
 
     mo.md("""

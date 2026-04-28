@@ -26,18 +26,14 @@ from loguru import logger
 def _export_html_wasm(
     notebook_path: Path, output_dir: Path, as_app: bool = False
 ) -> bool:
-    """Export a single marimo notebook to HTML/WebAssembly format."""
+    """Export a single marimo notebook to static HTML."""
     output_path: Path = notebook_path.with_suffix(".html")
 
-    # Base command for marimo export
-    cmd: List[str] = ["uvx", "marimo@0.16.2", "export", "html-wasm", "--sandbox"]
+    # Use static HTML export - notebooks run during build with real dataset
+    # Use uv run to execute in project environment with all dependencies
+    cmd: List[str] = ["uv", "run", "marimo", "export", "html", "--include-code"]
 
-    if as_app:
-        logger.info(f"Exporting {notebook_path} to {output_path} as app")
-        cmd.extend(["--mode", "run", "--show-code"])
-    else:
-        logger.info(f"Exporting {notebook_path} to {output_path} as notebook")
-        cmd.extend(["--mode", "edit"])
+    logger.info(f"Exporting {notebook_path} to {output_path} as static HTML")
 
     try:
         output_file: Path = output_dir / notebook_path.with_suffix(".html")
@@ -121,17 +117,8 @@ def _export(folder: Path, output_dir: Path, as_app: bool = False) -> List[dict]:
 
 def _copy_dataset(output_dir: Path) -> None:
     """Copy BIDS dataset to output directory for browser access."""
-    dataset_src = Path("datasets/bids-examples/ds114")
-    dataset_dst = output_dir / "data" / "ds114"
-
-    if not dataset_src.exists():
-        logger.warning(f"Dataset not found at {dataset_src}")
-        return
-
-    logger.info(f"Copying dataset from {dataset_src} to {dataset_dst}")
-    dataset_dst.parent.mkdir(parents=True, exist_ok=True)
-    shutil.copytree(dataset_src, dataset_dst, dirs_exist_ok=True)
-    logger.info("Dataset copied successfully")
+    # Not needed for static HTML export - dataset is used during build
+    logger.info("Skipping dataset copy (static HTML uses dataset during build)")
 
 
 def main(
