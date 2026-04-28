@@ -74,7 +74,7 @@ def _(dataset_path, mo):
     # Run 10 times to get reliable statistics
     pybids_times = []
     pybids_layout = None
-    for _ in range(10):
+    for _ in range(30):
         _start = time.time()
         pybids_layout = PyBIDSLayout(str(dataset_path), validate=False)
         pybids_times.append(time.time() - _start)
@@ -89,7 +89,7 @@ def _(dataset_path, mo):
     from bids import BIDSLayout
     layout = BIDSLayout('/path/to/dataset', validate=False)
     ```
-    ⏱️ **Indexing time**: {pybids_time_mean:.3f}s ± {pybids_time_std:.3f}s (n=8, outliers removed)
+    ⏱️ **Indexing time**: {pybids_time_mean:.3f}s ± {pybids_time_std:.3f}s (n=30, min & max removed)
     """)
     return pybids_layout, pybids_time_mean, pybids_time_std, time, np
 
@@ -103,7 +103,7 @@ def _(dataset_path, mo, np, time):
     from bids2table_compat import BIDSLayout as CompatLayout
     compat_times = []
     compat_layout = None
-    for _ in range(10):
+    for _ in range(30):
         _start = time.time()
         compat_layout = CompatLayout(str(dataset_path), validate=False)
         compat_times.append(time.time() - _start)
@@ -118,7 +118,7 @@ def _(dataset_path, mo, np, time):
     from bids2table_compat import BIDSLayout  # Just change the import!
     layout = BIDSLayout('/path/to/dataset', validate=False)
     ```
-    ⏱️ **Indexing time**: {compat_time_mean:.3f}s ± {compat_time_std:.3f}s (n=8, outliers removed)
+    ⏱️ **Indexing time**: {compat_time_mean:.3f}s ± {compat_time_std:.3f}s (n=30, min & max removed)
     """)
     return compat_layout, compat_time_mean, compat_time_std
 
@@ -134,7 +134,7 @@ def _(dataset_path, mo, np, time):
     # Run 10 times to get reliable statistics
     pandas_times = []
     pandas_df = None
-    for _ in range(10):
+    for _ in range(30):
         _start = time.time()
         pandas_tab = b2t.index_dataset(str(dataset_path))
         pandas_df = pandas_tab.to_pandas(types_mapper=pd.ArrowDtype)
@@ -153,7 +153,7 @@ def _(dataset_path, mo, np, time):
     tab = b2t.index_dataset('/path/to/dataset')
     df = tab.to_pandas(types_mapper=pd.ArrowDtype)
     ```
-    ⏱️ **Indexing time**: {pandas_time_mean:.3f}s ± {pandas_time_std:.3f}s (n=8, outliers removed)
+    ⏱️ **Indexing time**: {pandas_time_mean:.3f}s ± {pandas_time_std:.3f}s (n=30, min & max removed)
     """)
     return b2t, pandas_df, pandas_time_mean, pandas_time_std
 
@@ -168,7 +168,7 @@ def _(b2t, dataset_path, mo, np, time):
     # Run 10 times to get reliable statistics
     polars_times = []
     polars_df = None
-    for _ in range(10):
+    for _ in range(30):
         _start = time.time()
         polars_tab = b2t.index_dataset(str(dataset_path))
         polars_df = pl.from_arrow(polars_tab)
@@ -186,7 +186,7 @@ def _(b2t, dataset_path, mo, np, time):
 
     tab = b2t.index_dataset('/path/to/dataset')
     ```
-    ⏱️ **Indexing time**: {polars_time_mean:.3f}s ± {polars_time_std:.3f}s (n=8, outliers removed)
+    ⏱️ **Indexing time**: {polars_time_mean:.3f}s ± {polars_time_std:.3f}s (n=30, min & max removed)
     """)
     return pl, polars_df, polars_time_mean, polars_time_std
 
