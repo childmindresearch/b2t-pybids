@@ -1,0 +1,24 @@
+[submodule "projects/fitlins"]
+	path = projects/fitlins
+	url = https://github.com/poldracklab/fitlins.git
+[submodule "projects/mriqc"]
+	path = projects/mriqc
+	url = https://github.com/nipreps/mriqc.git
+[submodule "projects/niworkflows"]
+	path = projects/niworkflows
+	url = https://github.com/nipreps/niworkflows.git
+[submodule "projects/smriprep"]
+	path = projects/smriprep
+	url = https://github.com/nipreps/smriprep.git
+[submodule "projects/fmriprep"]
+	path = projects/fmriprep
+	url = https://github.com/nipreps/fmriprep.git
+[submodule "projects/bids-apps-example"]
+	path = projects/bids-apps-example
+	url = https://github.com/bids-apps/example.git
+[submodule "projects/qsiprep"]
+	path = projects/qsiprep
+	url = https://github.com/PennLINC/qsiprep.git
+[submodule "datasets/bids-examples"]
+	path = datasets/bids-examples
+	url = https://github.com/bids-standard/bids-examples.git
