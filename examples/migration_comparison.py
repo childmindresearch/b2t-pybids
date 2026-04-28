@@ -56,6 +56,8 @@ def _(mo):
     ## 1. Initialization & Indexing
 
     How to load and index a BIDS dataset.
+
+    Note: take benchmarking performance with a grain of salt since these numbers are from a Github Actions. Run it yourself to see the difference!
     """)
     return
 
@@ -63,56 +65,85 @@ def _(mo):
 @app.cell
 def _(dataset_path, mo):
     import time
+    import numpy as np
     from bids import BIDSLayout as PyBIDSLayout
 
     mo.md("### Approach 1: PyBIDS (Traditional)")
 
     # PyBIDS - slow but familiar
-    _start = time.time()
-    pybids_layout = PyBIDSLayout(str(dataset_path), validate=False)
-    pybids_time = time.time() - _start
+    # Run 10 times to get reliable statistics
+    pybids_times = []
+    pybids_layout = None
+    for _ in range(10):
+        _start = time.time()
+        pybids_layout = PyBIDSLayout(str(dataset_path), validate=False)
+        pybids_times.append(time.time() - _start)
+
+    # Remove best and worst times as outliers
+    pybids_times_trimmed = sorted(pybids_times)[1:-1]
+    pybids_time_mean = np.mean(pybids_times_trimmed)
+    pybids_time_std = np.std(pybids_times_trimmed)
+
     mo.md(f"""
     ```python
     from bids import BIDSLayout
     layout = BIDSLayout('/path/to/dataset', validate=False)
     ```
-    ⏱️ **Indexing time**: {pybids_time:.3f}s
+    ⏱️ **Indexing time**: {pybids_time_mean:.3f}s ± {pybids_time_std:.3f}s (n=8, outliers removed)
     """)
-    return pybids_layout, pybids_time, time
+    return pybids_layout, pybids_time_mean, pybids_time_std, time, np
 
 
 @app.cell
-def _(dataset_path, mo, time):
+def _(dataset_path, mo, np, time):
     mo.md("### Approach 2: bids2table_compat (Drop-in Replacement)")
 
     # bids2table_compat - fast, same API
-    _start = time.time()
+    # Run 10 times to get reliable statistics
     from bids2table_compat import BIDSLayout as CompatLayout
-    compat_layout = CompatLayout(str(dataset_path), validate=False)
-    compat_time = time.time() - _start
+    compat_times = []
+    compat_layout = None
+    for _ in range(10):
+        _start = time.time()
+        compat_layout = CompatLayout(str(dataset_path), validate=False)
+        compat_times.append(time.time() - _start)
+
+    # Remove best and worst times as outliers
+    compat_times_trimmed = sorted(compat_times)[1:-1]
+    compat_time_mean = np.mean(compat_times_trimmed)
+    compat_time_std = np.std(compat_times_trimmed)
 
     mo.md(f"""
     ```python
     from bids2table_compat import BIDSLayout  # Just change the import!
     layout = BIDSLayout('/path/to/dataset', validate=False)
     ```
-    ⏱️ **Indexing time**: {compat_time:.3f}s
+    ⏱️ **Indexing time**: {compat_time_mean:.3f}s ± {compat_time_std:.3f}s (n=8, outliers removed)
     """)
-    return compat_layout, compat_time
+    return compat_layout, compat_time_mean, compat_time_std
 
 
 @app.cell
-def _(dataset_path, mo, time):
+def _(dataset_path, mo, np, time):
     import bids2table as b2t
     import pandas as pd
 
     mo.md("### Approach 3: bids2table + pandas (Native)")
 
     # bids2table + pandas - fast, DataFrame native
-    _start = time.time()
-    pandas_tab = b2t.index_dataset(str(dataset_path))
-    pandas_df = pandas_tab.to_pandas(types_mapper=pd.ArrowDtype)
-    pandas_time = time.time() - _start
+    # Run 10 times to get reliable statistics
+    pandas_times = []
+    pandas_df = None
+    for _ in range(10):
+        _start = time.time()
+        pandas_tab = b2t.index_dataset(str(dataset_path))
+        pandas_df = pandas_tab.to_pandas(types_mapper=pd.ArrowDtype)
+        pandas_times.append(time.time() - _start)
+
+    # Remove best and worst times as outliers
+    pandas_times_trimmed = sorted(pandas_times)[1:-1]
+    pandas_time_mean = np.mean(pandas_times_trimmed)
+    pandas_time_std = np.std(pandas_times_trimmed)
 
     mo.md(f"""
     ```python
@@ -122,22 +153,31 @@ def _(dataset_path, mo, time):
     tab = b2t.index_dataset('/path/to/dataset')
     df = tab.to_pandas(types_mapper=pd.ArrowDtype)
     ```
-    ⏱️ **Indexing time**: {pandas_time:.3f}s
+    ⏱️ **Indexing time**: {pandas_time_mean:.3f}s ± {pandas_time_std:.3f}s (n=8, outliers removed)
     """)
-    return b2t, pandas_df, pandas_time
+    return b2t, pandas_df, pandas_time_mean, pandas_time_std
 
 
 @app.cell
-def _(b2t, dataset_path, mo, time):
+def _(b2t, dataset_path, mo, np, time):
     import polars as pl
 
     mo.md("### Approach 4: bids2table + polars (Native + Fast)")
 
     # bids2table + polars - fastest, lowest memory
-    _start = time.time()
-    polars_tab = b2t.index_dataset(str(dataset_path))
-    polars_df = pl.from_arrow(polars_tab)
-    polars_time = time.time() - _start
+    # Run 10 times to get reliable statistics
+    polars_times = []
+    polars_df = None
+    for _ in range(10):
+        _start = time.time()
+        polars_tab = b2t.index_dataset(str(dataset_path))
+        polars_df = pl.from_arrow(polars_tab)
+        polars_times.append(time.time() - _start)
+
+    # Remove best and worst times as outliers
+    polars_times_trimmed = sorted(polars_times)[1:-1]
+    polars_time_mean = np.mean(polars_times_trimmed)
+    polars_time_std = np.std(polars_times_trimmed)
 
     mo.md(f"""
     ```python
@@ -146,35 +186,35 @@ def _(b2t, dataset_path, mo, time):
 
     tab = b2t.index_dataset('/path/to/dataset')
     ```
-    ⏱️ **Indexing time**: {polars_time:.3f}s
+    ⏱️ **Indexing time**: {polars_time_mean:.3f}s ± {polars_time_std:.3f}s (n=8, outliers removed)
     """)
-    return pl, polars_df, polars_time
+    return pl, polars_df, polars_time_mean, polars_time_std
 
 
 @app.cell
-def _(compat_time, mo, pandas_time, polars_time, pybids_time):
+def _(compat_time_mean, compat_time_std, mo, pandas_time_mean, pandas_time_std, polars_time_mean, polars_time_std, pybids_time_mean, pybids_time_std):
     mo.md("### Performance Comparison")
 
-    if pybids_time:
-        speedup_compat = pybids_time / compat_time
-        speedup_pandas = pybids_time / pandas_time
-        speedup_polars = pybids_time / polars_time
+    if pybids_time_mean:
+        speedup_compat = pybids_time_mean / compat_time_mean
+        speedup_pandas = pybids_time_mean / pandas_time_mean
+        speedup_polars = pybids_time_mean / polars_time_mean
 
         bmark = f"""
-        | Approach | Time | Speedup vs PyBIDS |
-        |----------|------|-------------------|
-        | PyBIDS | {pybids_time:.3f}s | 1x (baseline) |
-        | bids2table_compat | {compat_time:.3f}s | **{speedup_compat:.1f}x faster** ⚡ |
-        | bids2table + pandas | {pandas_time:.3f}s | **{speedup_pandas:.1f}x faster** ⚡ |
-        | bids2table + polars | {polars_time:.3f}s | **{speedup_polars:.1f}x faster** ⚡ |
+        | Approach | Time (mean ± std) | Speedup vs PyBIDS |
+        |----------|-------------------|-------------------|
+        | PyBIDS | {pybids_time_mean:.3f}s ± {pybids_time_std:.3f}s | 1x (baseline) |
+        | bids2table_compat | {compat_time_mean:.3f}s ± {compat_time_std:.3f}s | **{speedup_compat:.1f}x faster** ⚡ |
+        | bids2table + pandas | {pandas_time_mean:.3f}s ± {pandas_time_std:.3f}s | **{speedup_pandas:.1f}x faster** ⚡ |
+        | bids2table + polars | {polars_time_mean:.3f}s ± {polars_time_std:.3f}s | **{speedup_polars:.1f}x faster** ⚡ |
         """
     else:
         bmark = f"""
-        | Approach | Time |
-        |----------|------|
-        | bids2table_compat | {compat_time:.3f}s |
-        | bids2table + pandas | {pandas_time:.3f}s |
-        | bids2table + polars | {polars_time:.3f}s |
+        | Approach | Time (mean ± std) |
+        |----------|-------------------|
+        | bids2table_compat | {compat_time_mean:.3f}s ± {compat_time_std:.3f}s |
+        | bids2table + pandas | {pandas_time_mean:.3f}s ± {pandas_time_std:.3f}s |
+        | bids2table + polars | {polars_time_mean:.3f}s ± {polars_time_std:.3f}s |
 
         *PyBIDS not installed for comparison*
         """
