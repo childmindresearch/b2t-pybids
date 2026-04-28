@@ -364,6 +364,50 @@ class BIDSLayout:
         """
         return BIDSFile(path)
 
+    def get_entities(self, **filters) -> Dict[str, List[str]]:
+        """
+        Get dictionary of all entities and their unique values.
+
+        Args:
+            **filters: Optional entity filters to apply before extracting entities
+
+        Returns:
+            Dictionary where keys are entity names and values are lists of unique values
+
+        Example:
+            >>> entities = layout.get_entities()
+            >>> entities['task']
+            ['rest', 'nback', 'faces']
+            >>> # With filters
+            >>> entities = layout.get_entities(suffix='bold')
+            >>> entities['sub']
+            ['01', '02']  # Only subjects with BOLD data
+        """
+        # Apply filters if provided
+        if filters:
+            filtered_df = self.df.copy()
+            for key, value in filters.items():
+                key = self._map_entity_key(key)
+                if key in filtered_df.columns:
+                    filtered_df = filtered_df[filtered_df[key] == value]
+        else:
+            filtered_df = self.df
+
+        # Extract unique values for each entity column
+        # Standard BIDS entities that might be present
+        entity_cols = ['sub', 'ses', 'task', 'acq', 'ce', 'rec', 'dir', 'run',
+                       'mod', 'echo', 'flip', 'inv', 'mt', 'part', 'recording',
+                       'suffix', 'space', 'res', 'den', 'label', 'desc', 'datatype']
+
+        entities = {}
+        for col in entity_cols:
+            if col in filtered_df.columns:
+                unique_vals = filtered_df[col].dropna().unique().tolist()
+                if unique_vals:  # Only include if not empty
+                    entities[col] = sorted(unique_vals)
+
+        return entities
+
     def add_custom_entity(
         self,
         name: str,

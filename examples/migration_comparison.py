@@ -680,6 +680,22 @@ def _(mo):
 
 
 @app.cell
+def _(mo, pybids_layout):
+    mo.md("### Approach 1: PyBIDS")
+
+    # PyBIDS doesn't have a built-in method for custom entities
+    # You'd need to extend BIDSLayout or use external tracking
+    mo.md("""
+    ```python
+    # No native support for custom entities in PyBIDS
+    # Would need to track separately or extend BIDSLayout
+    ```
+    ⚠️ **No analog in PyBIDS** - custom entity tracking must be done separately
+    """)
+    return
+
+
+@app.cell
 def _(compat_layout, mo):
     mo.md("### Approach 2: bids2table_compat")
 
@@ -783,9 +799,23 @@ def _(mo):
 
 
 @app.cell
+def _(mo, pybids_layout):
+    mo.md("### Approach 1: PyBIDS")
+
+    mo.md("""
+    ```python
+    # PyBIDS uses a SQLite database internally, not DataFrames
+    # No direct DataFrame access available
+    ```
+    ⚠️ **No DataFrame analog in PyBIDS** - uses SQLite database backend instead
+    """)
+    return
+
+
+@app.cell
 def _(compat_layout, mo):
     mo.md("""
-    ### bids2table_compat: Underlying DataFrame
+    ### Approach 2: bids2table_compat
 
     The compat layer wraps a pandas DataFrame:
     """)
@@ -797,7 +827,7 @@ def _(compat_layout, mo):
 @app.cell
 def _(mo, pandas_df):
     mo.md("""
-    ### bids2table + pandas: DataFrame
+    ### Approach 3: bids2table + pandas
 
     Direct access to the full DataFrame:
     """)
@@ -809,7 +839,7 @@ def _(mo, pandas_df):
 @app.cell
 def _(mo, polars_df):
     mo.md("""
-    ### bids2table + polars: DataFrame
+    ### Approach 4: bids2table + polars
 
     Polars DataFrame with lazy evaluation:
     """)
