@@ -65,3 +65,31 @@ class BIDSFile:
     def __hash__(self) -> int:
         """Allow use in sets/dicts."""
         return hash(self.path)
+
+    def __lt__(self, other) -> bool:
+        """Less-than comparison based on path (for sorting)."""
+        if isinstance(other, BIDSFile):
+            return self.path < other.path
+        return NotImplemented
+
+    def __le__(self, other) -> bool:
+        """Less-than-or-equal comparison based on path."""
+        if isinstance(other, BIDSFile):
+            return self.path <= other.path
+        return NotImplemented
+
+    def __gt__(self, other) -> bool:
+        """Greater-than comparison based on path."""
+        if isinstance(other, BIDSFile):
+            return self.path > other.path
+        return NotImplemented
+
+    def __ge__(self, other) -> bool:
+        """Greater-than-or-equal comparison based on path."""
+        if isinstance(other, BIDSFile):
+            return self.path >= other.path
+        return NotImplemented
+
+    def __contains__(self, item) -> bool:
+        """Check if substring is in the file path (for 'in' operator)."""
+        return item in self.path

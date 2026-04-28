@@ -19,6 +19,7 @@ Example:
 from .layout import BIDSLayout
 from .query import Query
 from .bidsfile import BIDSFile
+from . import utils
 
 __version__ = "0.1.0"
 
@@ -26,4 +27,5 @@ __all__ = [
     "BIDSLayout",
     "Query",
     "BIDSFile",
+    "utils",
 ]
