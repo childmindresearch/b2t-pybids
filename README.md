@@ -8,6 +8,11 @@ Expand the bids2table API to capture common usage patterns of pybids used in var
 
 ## Submodules
 
+### Core Libraries
+
+- **pybids**: The library being replaced
+- **bids2table**: The target library to wrap
+
 ### Projects (pybids users)
 
 This repository contains several major pybids-using projects as submodules for analysis:

@@ -22,3 +22,9 @@
 [submodule "datasets/bids-examples"]
 	path = datasets/bids-examples
 	url = https://github.com/bids-standard/bids-examples.git
+[submodule "projects/pybids"]
+	path = projects/pybids
+	url = https://github.com/bids-standard/pybids.git
+[submodule "projects/bids2table"]
+	path = projects/bids2table
+	url = https://github.com/childmindresearch/bids2table.git
