@@ -12,15 +12,13 @@ Based on analysis of 6 major projects (fmriprep, smriprep, mriqc, qsiprep, fitli
 |----------------|-------------|----------------|------------|-------------------|-------------------|
 | **BIDSLayout()** | 44 | All 6 | **CRITICAL** | Partial | **New wrapper needed** - Core layout object with caching, validation control |
 | **layout.get()** | 21 | 5/6 (not mriqc) | **CRITICAL** | Partial | **New endpoint needed** - Query interface with filtering |
-| **layout.get_metadata()** | 24 | 3/6 (fmriprep, qsiprep, niworkflows) | **CRITICAL** | ✓ Yes (`load_bids_metadata`) | **Migration guide** - Direct mapping available |
-| **layout.get_subjects()** | 8 | 2/6 (fmriprep, smriprep) | **HIGH** | Partial | **New endpoint needed** - Extract unique subjects from index |
+| **layout.get_metadata()** | 29 | 3/6 (fmriprep, qsiprep, niworkflows) | **CRITICAL** | ✓ Yes (`load_bids_metadata`) | **Migration guide** - Direct mapping available |
 | **layout.get_sessions()** | 7 | 2/6 (fmriprep, smriprep) | **HIGH** | Partial | **New endpoint needed** - Extract unique sessions from index |
+| **layout.get_subjects()** | 6 | 4/6 (fitlins, niworkflows, qsiprep, pybids) | **HIGH** | Partial | **New endpoint needed** - Extract unique subjects from index |
 | **layout.get_file().get_entities()** | 6 | 1/6 (qsiprep) | **MEDIUM** | ✓ Yes (`parse_bids_entities`) | **Migration guide** - Direct mapping available |
-| **layout.get_fmapids()** | 2 | 1/6 (fmriprep) | **MEDIUM** | ✗ No | **New endpoint needed** - Complex fieldmap association logic |
-| **layout.get_fieldmap()** | 1 | 1/6 (qsiprep) | **MEDIUM** | ✗ No | **New endpoint needed** - Fieldmap matching by IntendedFor |
-| **layout.get_runs()** | ? | Multiple | **MEDIUM** | Partial | **New endpoint needed** - Extract unique runs from index |
-| **layout.get_tasks()** | ? | Multiple | **MEDIUM** | Partial | **New endpoint needed** - Extract unique tasks from index |
-| **layout.build_path()** | ? | Multiple | **LOW** | ✓ Yes (`format_bids_path`) | **Migration guide** - Direct mapping available |
+| **layout.get_fieldmap()** | 4 | 1/6 (qsiprep) | **MEDIUM** | ✗ No | **New endpoint needed** - Fieldmap matching by IntendedFor |
+| **layout.build_path()** | 2 | 1/6 (fitlins) | **LOW** | ✓ Yes (`format_bids_path`) | **Migration guide** - Direct mapping available |
+| **layout.get_fmapids()** | 1 | 1/6 (fmriprep) | **LOW** | ✗ No | **New endpoint needed** - Complex fieldmap association logic |
 
 ## Detailed Method Analysis
 
@@ -126,7 +124,7 @@ files = df[
 
 ---
 
-### 3. layout.get_metadata() - Sidecar JSON Retrieval (24 occurrences)
+### 3. layout.get_metadata() - Sidecar JSON Retrieval (29 occurrences)
 
 **Importance**: CRITICAL - Essential for metadata-driven processing
 
@@ -170,7 +168,7 @@ metadata = load_bids_metadata(file_path, dataset_path)
 
 ---
 
-### 4. layout.get_subjects() - Subject Enumeration (8 occurrences)
+### 4. layout.get_subjects() - Subject Enumeration (6 occurrences)
 
 **Importance**: HIGH - Participant-level iteration
 
@@ -279,9 +277,9 @@ entities = parse_bids_entities(file_path)
 
 ---
 
-### 7. layout.get_fmapids() - Fieldmap ID Retrieval (2 occurrences)
+### 7. layout.get_fmapids() - Fieldmap ID Retrieval (1 occurrence)
 
-**Importance**: MEDIUM - fMRI distortion correction
+**Importance**: LOW - fMRI distortion correction (rarely used)
 
 **Common Usage Patterns**:
 ```python
@@ -309,7 +307,7 @@ fmap_ids = layout.get_fmapids(
 
 ---
 
-### 8. layout.get_fieldmap() - Fieldmap File Retrieval (1 occurrence)
+### 8. layout.get_fieldmap() - Fieldmap File Retrieval (4 occurrences)
 
 **Importance**: MEDIUM - DWI/fMRI preprocessing
 
@@ -335,31 +333,11 @@ fmap = layout.get_fieldmap(dwi_file, return_list=True)
 
 ---
 
-### 9-10. layout.get_runs() / layout.get_tasks() - Entity Listing
-
-**Importance**: MEDIUM - Iteration over runs/tasks
-
-**Common Usage Patterns**:
-```python
-# Get all runs for a subject/session
-runs = layout.get_runs(subject='01', session='01', suffix='bold')
-
-# Get all tasks in dataset
-tasks = layout.get_tasks()
-```
-
-**B2T Analog**: Partial (DataFrame filtering)
-
-**Migration Strategy**: **New endpoint needed**
-- Similar to `get_subjects()` and `get_sessions()`
-- Add `BIDSLayout.get_<entity>(**filters)` methods
-- Generic implementation for any entity column
-
----
-
-### 11. layout.build_path() - Path Construction
+### 9. layout.build_path() - Path Construction (2 occurrences)
 
 **Importance**: LOW - Output path generation
+
+**Used by**: fitlins only
 
 **Common Usage Patterns**:
 ```python
@@ -388,18 +366,18 @@ path = format_bids_path(entities_dict, pattern)
 
 ### Phase 1: Critical Core (Blocking most workflows)
 1. **BIDSLayout wrapper class** - Core infrastructure
-2. **layout.get()** - Primary query interface  
-3. **layout.get_metadata()** - Metadata access (migration guide only)
+2. **layout.get()** - Primary query interface (21 uses)
+3. **layout.get_metadata()** - Metadata access (29 uses - migration guide only)
 
 ### Phase 2: High-Value Utilities
-4. **layout.get_subjects()** - Subject iteration
-5. **layout.get_sessions()** - Session iteration
-6. **layout.get_entities()** - Entity extraction (migration guide only)
+4. **layout.get_sessions()** - Session iteration (7 uses)
+5. **layout.get_subjects()** - Subject iteration (6 uses)
+6. **layout.get_entities()** - Entity extraction (6 uses - migration guide only)
 
 ### Phase 3: Specialized Features
-7. **layout.get_fieldmap() / get_fmapids()** - Fieldmap association
-8. **layout.get_runs() / get_tasks()** - Generic entity listing
-9. **layout.build_path()** - Path construction (migration guide only)
+7. **layout.get_fieldmap()** - Fieldmap file matching (4 uses, qsiprep only)
+8. **layout.build_path()** - Path construction (2 uses, fitlins only - migration guide)
+9. **layout.get_fmapids()** - Fieldmap ID retrieval (1 use, fmriprep only)
 
 ## Project-Specific Usage Notes
 
