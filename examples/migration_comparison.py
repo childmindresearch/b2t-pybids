@@ -69,7 +69,6 @@ def _(mo):
 
     How to load and index a BIDS dataset.
 
-    Note: take benchmarking performance with a grain of salt since these numbers are from a Github Actions. Run it yourself to see the difference!
     """)
     return
 
