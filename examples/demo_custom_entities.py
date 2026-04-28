@@ -331,8 +331,10 @@ def _(layout, mo):
 
 
 @app.cell
-def _(layout):
-    layout.df[['sub', 'datatype', 'suffix', 'path', 'visual_qc', 'snr_grade']].groupby('sub').first().head(5)
+def _(layout, mo):
+    mo.md(layout.df[['sub',
+                     'visual_qc',
+                     'snr_grade']].groupby('sub').first().head(5).to_markdown())
     return
 
 
