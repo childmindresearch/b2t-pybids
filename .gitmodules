@@ -31,9 +31,6 @@
 [submodule "projects/nibabies"]
 	path = projects/nibabies
 	url = https://github.com/nipreps/nibabies.git
-[submodule "projects/neurosynth"]
-	path = projects/neurosynth
-	url = https://github.com/neurosynth/neurosynth.git
 [submodule "projects/templateflow"]
 	path = projects/templateflow
 	url = https://github.com/templateflow/python-client.git
