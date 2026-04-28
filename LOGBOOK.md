@@ -615,3 +615,41 @@ uv run marimo run examples/demo_compat_layer.py
 ---
 
 **End of Logbook** (Last updated: 2026-04-28)
+
+## 2026-04-28 (Later): Marimo Display Fix
+
+### Issue
+Marimo notebook cells 6-7 (and others) not displaying `mo.md()` output.
+
+### Root Cause
+Cells were calling `mo.md()` but not using the result. In marimo, the last expression in a cell is automatically displayed.
+
+### Solution
+Simplified approach:
+1. Build the markdown text in a variable
+2. Call `mo.md(text)` as the **last statement** in the cell
+3. Return only data variables, not display objects
+
+**Example**:
+```python
+@app.cell
+def _(bids_files, layout, mo):
+    if bids_files:
+        # Build text
+        entity_text = f"Found {len(bids_files)} files..."
+    else:
+        entity_text = "⚠️ No files found"
+    
+    # Call mo.md() as last statement (auto-displays)
+    mo.md(entity_text)
+    return (bids_files,)  # Return data only
+```
+
+### Files Modified
+- `examples/demo_compat_layer.py`: Fixed all cells with mo.md() calls
+
+### Lesson Learned
+Marimo automatically displays the last expression - no need to capture or return display objects. Keep it simple\!
+
+---
+
