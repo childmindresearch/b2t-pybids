@@ -19,11 +19,14 @@ This repository contains several major pybids-using projects as submodules for a
 
 - **fmriprep**: fMRI preprocessing pipeline
 - **smriprep**: Structural MRI preprocessing pipeline
+- **nibabies**: Infant fMRI preprocessing pipeline
 - **mriqc**: MRI quality control pipeline
 - **qsiprep**: Diffusion MRI preprocessing pipeline
 - **fitlins**: fMRI analysis workflow
 - **niworkflows**: Common neuroimaging workflow components
+- **templateflow**: Template and atlas repository (advanced PyBIDS usage)
 - **bids-apps-example**: Example BIDS application
+- **neurosynth**: Meta-analysis framework (no PyBIDS usage found)
 
 ### Datasets
 
