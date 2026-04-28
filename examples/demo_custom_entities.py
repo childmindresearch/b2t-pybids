@@ -1,139 +1,543 @@
-#!/usr/bin/env python
-"""
-Demo: Adding custom entities to BIDSLayout (like templateflow does).
+"""Demo: Custom Entities - Advanced Usage Patterns"""
 
-This shows how to add custom columns to the layout DataFrame and then
-query them just like standard BIDS entities.
-"""
+import marimo
 
-from pathlib import Path
-from bids2table_compat import BIDSLayout
+__generated_with = "0.9.14"
+app = marimo.App(width="medium")
 
-def main():
-    # Find a test dataset
-    repo_root = Path(__file__).parent.parent
+
+@app.cell(hide_code=True)
+def __(mo):
+    mo.md(
+        """
+        # Working with Custom Entities
+
+        ## Overview
+
+        The bids2table compatibility layer supports custom entities just like PyBIDS,
+        but simpler and more flexible. Since the underlying data is a pandas DataFrame,
+        you can add custom columns and query them naturally.
+
+        This is how **templateflow** handles custom entities like `template`, `cohort`, `resolution`.
+
+        ## Why Custom Entities?
+
+        Standard BIDS defines entities like `subject`, `session`, `task`. But some projects need more:
+
+        - **templateflow**: `template`, `cohort`, `resolution`, `atlas`
+        - **Processing pipelines**: `status`, `qc_grade`, `processing_date`
+        - **Custom workflows**: Domain-specific labels, groupings, derived metadata
+
+        This notebook shows three ways to add custom entities and common usage patterns.
+        """
+    )
+    return
+
+
+@app.cell
+def __():
+    import marimo as mo
+    from pathlib import Path
+
+    # Find test dataset
+    repo_root = Path.cwd().parent if Path.cwd().name == 'examples' else Path.cwd()
     dataset_path = repo_root / 'datasets' / 'bids-examples' / 'ds001'
 
     if not dataset_path.exists():
-        print(f"Dataset not found: {dataset_path}")
-        return
+        mo.md(f"⚠️ Dataset not found: {dataset_path}")
+        mo.stop()
 
-    print("="* 70)
-    print("Demo: Adding Custom Entities to BIDSLayout")
-    print("="* 70)
-    print()
+    mo.md(f"✅ Using dataset: `{dataset_path.name}`")
+    return Path, dataset_path, mo, repo_root
+
+
+@app.cell
+def __(dataset_path):
+    from bids2table_compat import BIDSLayout
 
     # Initialize layout
-    print("1. Create standard BIDSLayout:")
     layout = BIDSLayout(dataset_path, validate=False)
-    print(f"   Initial columns: {list(layout.df.columns)[:10]}...")
-    print(f"   Files: {len(layout.df)}")
-    print()
+    return BIDSLayout, layout
 
-    # Add custom entity as a column
-    print("2. Add custom entity 'my_custom_label':")
-    print("   (Simulating what templateflow does with 'template', 'cohort', etc.)")
-    print()
 
-    # Example: Add a custom label based on some logic
-    # In templateflow, this might be parsed from filenames or set programmatically
+@app.cell(hide_code=True)
+def __(mo):
+    mo.md(
+        """
+        ---
+        ## Method 1: Direct DataFrame Manipulation
+
+        The simplest approach - add columns directly to `layout.df`.
+        """
+    )
+    return
+
+
+@app.cell
+def __(layout, mo):
+    # Add a custom label based on file type
     layout.df['my_custom_label'] = layout.df['suffix'].apply(
         lambda x: 'anatomical' if x in ['T1w', 'T2w', 'inplaneT2']
         else 'functional' if x == 'bold'
         else 'other'
     )
 
-    print(f"   Added column: 'my_custom_label'")
-    print(f"   Unique values: {layout.df['my_custom_label'].unique().tolist()}")
-    print()
+    mo.md(f"""
+    **Added**: `my_custom_label` column
 
-    # Query with the custom entity
-    print("3. Query using the custom entity:")
+    **Values**: `{layout.df['my_custom_label'].unique().tolist()}`
+
+    Now we can query files using this custom entity!
+    """)
+    return
+
+
+@app.cell
+def __(layout, mo):
+    # Query with custom entity
     anatomical_files = layout.get(my_custom_label='anatomical', return_type='filename')
-    print(f"   Files with my_custom_label='anatomical': {len(anatomical_files)}")
-    if anatomical_files:
-        print(f"   Example: {Path(anatomical_files[0]).name}")
-    print()
-
     functional_files = layout.get(my_custom_label='functional', return_type='filename')
-    print(f"   Files with my_custom_label='functional': {len(functional_files)}")
-    if functional_files:
-        print(f"   Example: {Path(functional_files[0]).name}")
-    print()
 
-    # Combine standard and custom entities
-    print("4. Query with both standard and custom entities:")
-    sub01_anat = layout.get(
+    mo.md(f"""
+    **Query**: `my_custom_label='anatomical'` → {len(anatomical_files)} files
+
+    **Query**: `my_custom_label='functional'` → {len(functional_files)} files
+    """)
+    return anatomical_files, functional_files
+
+
+@app.cell(hide_code=True)
+def __(mo):
+    mo.md(
+        """
+        ---
+        ## Method 2: Using add_custom_entity() Helper
+
+        The compat layer provides a convenience method for common patterns.
+        """
+    )
+    return
+
+
+@app.cell
+def __(layout, mo):
+    # Add constant value
+    layout.add_custom_entity('processing_status', 'pending')
+
+    # Add from dict (subject → value mapping)
+    qc_grades = {'01': 'pass', '02': 'fail', '03': 'pass'}
+    layout.add_custom_entity('qc_grade', qc_grades)
+
+    mo.md("""
+    **Added**:
+    - `processing_status` = 'pending' (constant for all files)
+    - `qc_grade` = subject-specific values from dict
+    """)
+    return qc_grades,
+
+
+@app.cell
+def __(layout, mo):
+    # Query with both standard and custom entities
+    sub01_pass = layout.get(
         subject='01',
-        my_custom_label='anatomical',
+        qc_grade='pass',
         return_type='filename'
     )
-    print(f"   sub-01 anatomical files: {len(sub01_anat)}")
-    for f in sub01_anat:
-        print(f"     - {Path(f).name}")
-    print()
 
-    # More complex example: Add entity from file content/metadata
-    print("5. Add entity based on file metadata:")
-    # Simulate: check RepetitionTime and add 'tr_category'
+    mo.md(f"""
+    **Combined query**: `subject='01'` + `qc_grade='pass'`
+
+    **Found**: {len(sub01_pass)} files
+    """)
+    return sub01_pass,
+
+
+@app.cell(hide_code=True)
+def __(mo):
+    mo.md(
+        """
+        ---
+        ## Method 3: Add Entity from Function
+
+        Compute custom entities based on complex logic.
+        """
+    )
+    return
+
+
+@app.cell
+def __(layout, mo):
+    # Define function to compute entity
+    def categorize_by_datatype(row):
+        if row.get('datatype') == 'anat':
+            return 'structural'
+        elif row.get('datatype') == 'func':
+            return 'functional'
+        else:
+            return 'other'
+
+    layout.add_custom_entity('scan_category', categorize_by_datatype)
+
+    mo.md(f"""
+    **Added**: `scan_category` computed from datatype
+
+    **Values**: `{layout.df['scan_category'].unique().tolist()}`
+    """)
+    return categorize_by_datatype,
+
+
+@app.cell(hide_code=True)
+def __(mo):
+    mo.md(
+        """
+        ---
+        ## Common Pattern 1: Categorize Files
+
+        Group files into semantic categories for easier querying.
+        """
+    )
+    return
+
+
+@app.cell
+def __(layout, mo):
+    # Categorize by modality
+    def categorize_modality(row):
+        suffix = row.get('suffix', '')
+        if suffix in ['T1w', 'T2w', 'FLAIR', 'inplaneT2']:
+            return 'anatomical'
+        elif suffix == 'bold':
+            return 'functional'
+        elif suffix == 'dwi':
+            return 'diffusion'
+        else:
+            return 'other'
+
+    layout.df['modality_type'] = layout.df.apply(categorize_modality, axis=1)
+
+    # Query by category
+    anat_files = layout.get(modality_type='anatomical', return_type='filename')
+
+    mo.md(f"""
+    **Pattern**: Categorize files by imaging modality
+
+    **Anatomical files**: {len(anat_files)}
+    """)
+    return anat_files, categorize_modality
+
+
+@app.cell(hide_code=True)
+def __(mo):
+    mo.md(
+        """
+        ---
+        ## Common Pattern 2: Track Processing Status
+
+        Mark files as they're processed for incremental workflows.
+        """
+    )
+    return
+
+
+@app.cell
+def __(layout, mo):
+    # Initialize all as unprocessed
+    layout.df['processed'] = False
+
+    # Mark some files as processed (simulated)
+    processed_paths = layout.df['path'].iloc[:5].tolist()
+    layout.df.loc[layout.df['path'].isin(processed_paths), 'processed'] = True
+
+    # Query unprocessed files
+    pending = layout.get(processed=False, return_type='filename')
+
+    mo.md(f"""
+    **Pattern**: Track which files have been processed
+
+    **Processed**: {layout.df['processed'].sum()} files
+
+    **Pending**: {len(pending)} files
+
+    💡 **Use case**: Resume interrupted processing pipelines
+    """)
+    return pending, processed_paths
+
+
+@app.cell(hide_code=True)
+def __(mo):
+    mo.md(
+        """
+        ---
+        ## Common Pattern 3: Add Metadata-Based Entities
+
+        Derive entities from file metadata (RepetitionTime, EchoTime, etc.)
+        """
+    )
+    return
+
+
+@app.cell
+def __(layout, mo):
+    import bids2table as b2t
+
+    # Add TR category for BOLD files
     def categorize_tr(row):
         if row['suffix'] != 'bold':
             return None
-        # In real case, would load metadata here
-        # For demo, just use a placeholder
-        return 'short_tr'  # < 2s
+
+        # In real use, would load metadata here
+        # For demo, just use placeholder
+        return 'short_tr'  # Simulated: < 2s
 
     layout.df['tr_category'] = layout.df.apply(categorize_tr, axis=1)
 
     short_tr_files = layout.get(tr_category='short_tr', return_type='filename')
-    print(f"   Files with tr_category='short_tr': {len(short_tr_files)}")
-    print()
 
-    # Show how to add entities from a mapping/dictionary
-    print("6. Add entity from external mapping (like a processing manifest):")
-    # Simulate external metadata about files
-    processing_status = {
-        'sub-01': 'complete',
-        'sub-02': 'complete',
-        'sub-03': 'failed',
+    mo.md(f"""
+    **Pattern**: Categorize by acquisition parameters
+
+    **Short TR files**: {len(short_tr_files)}
+
+    💡 **Use case**: Filter files by imaging parameters without reading full files
+    """)
+    return b2t, categorize_tr, short_tr_files
+
+
+@app.cell(hide_code=True)
+def __(mo):
+    mo.md(
+        """
+        ---
+        ## Common Pattern 4: External Data Integration
+
+        Merge custom metadata from external sources.
+        """
+    )
+    return
+
+
+@app.cell
+def __(layout, mo):
+    import pandas as pd
+
+    # Simulate external QC data
+    qc_data = pd.DataFrame({
+        'sub': ['01', '02', '03'],
+        'visual_qc': ['pass', 'pass', 'fail'],
+        'snr_grade': ['good', 'excellent', 'poor']
+    })
+
+    # Merge with layout (in real use, would do: layout.df = layout.df.merge(...))
+    # For demo, just show the concept
+    mo.md(f"""
+    **Pattern**: Integrate external metadata
+
+    **External data**:
+    {qc_data.to_markdown()}
+
+    **Then merge**: `layout.df = layout.df.merge(qc_data, on='sub', how='left')`
+
+    **Query**: `layout.get(visual_qc='pass', snr_grade='excellent')`
+
+    💡 **Use case**: QC results, demographic data, processing metadata
+    """)
+    return pd, qc_data
+
+
+@app.cell(hide_code=True)
+def __(mo):
+    mo.md(
+        """
+        ---
+        ## Common Pattern 5: Rename/Recode Entities
+
+        Simplify entity values for easier querying.
+        """
+    )
+    return
+
+
+@app.cell
+def __(layout, mo):
+    # Recode task names to abbreviations
+    task_mapping = {
+        'balloonanalogrisktask': 'BART',
+        'restingstate': 'rest',
+        'nback': 'nback'
     }
 
-    layout.df['processing_status'] = layout.df['sub'].map(processing_status)
-
-    completed_subjects = layout.get_subjects(processing_status='complete')
-    print(f"   Subjects with processing_status='complete': {completed_subjects}")
-    print()
-
-    # Advanced: Modify entity values
-    print("7. Modify entity values (e.g., rename task names):")
-    print(f"   Original tasks: {layout.df['task'].unique()}")
-
-    # Create a mapping for task names
-    task_mapping = {'balloonanalogrisktask': 'BART'}
+    # Apply mapping
+    original_tasks = layout.df['task'].unique()
     layout.df['task'] = layout.df['task'].replace(task_mapping)
+    new_tasks = layout.df['task'].dropna().unique()
 
-    print(f"   Renamed tasks: {layout.df['task'].dropna().unique()}")
+    # Query with new short names
     bart_files = layout.get(task='BART', return_type='filename')
-    print(f"   Files with task='BART': {len(bart_files)}")
-    print()
 
-    print("="* 70)
-    print("Summary: Working with Custom Entities")
-    print("="* 70)
-    print()
-    print("✅ You can add custom columns directly to layout.df")
-    print("✅ Query them with layout.get() just like standard entities")
-    print("✅ Combine custom and standard entities in queries")
-    print("✅ No special methods needed - it's just pandas DataFrame operations!")
-    print()
-    print("Templateflow pattern:")
-    print("  1. Define custom entities in config.json (for parsing)")
-    print("  2. b2t indexes and includes them as columns")
-    print("  3. Or add columns programmatically: layout.df['entity'] = values")
-    print("  4. Query as usual: layout.get(entity='value')")
-    print()
-    print("="* 70)
+    mo.md(f"""
+    **Pattern**: Rename entities for convenience
+
+    **Original**: `{original_tasks.tolist()}`
+
+    **Renamed**: `{new_tasks.tolist()}`
+
+    **Query**: `task='BART'` → {len(bart_files)} files
+
+    💡 **Use case**: Shorter names, standardize across datasets
+    """)
+    return bart_files, new_tasks, original_tasks, task_mapping
 
 
-if __name__ == '__main__':
-    main()
+@app.cell(hide_code=True)
+def __(mo):
+    mo.md(
+        """
+        ---
+        ## How templateflow Uses Custom Entities
+
+        templateflow defines custom entities in a BIDS schema config:
+
+        ```json
+        {
+          "entities": [
+            {"name": "template", "pattern": "[/\\\\]tpl-([a-zA-Z0-9]+)"},
+            {"name": "cohort", "pattern": "[_/\\\\]cohort-(\\d+)"},
+            {"name": "resolution", "pattern": "[_/\\\\]+res-0*(\\d+)"}
+          ]
+        }
+        ```
+
+        Then b2t indexes these as columns automatically, and you can query:
+
+        ```python
+        from templateflow import api as tflow
+
+        # Query with custom entities
+        mni_files = tflow.get(template='MNI152NLin2009cAsym', resolution=1)
+        infant_files = tflow.get(cohort=1)  # cohort = age group
+        ```
+
+        **You can do the same** by adding columns programmatically:
+
+        ```python
+        layout.df['template'] = ...
+        layout.df['cohort'] = ...
+        files = layout.get(template='MNI152', cohort=1)
+        ```
+        """
+    )
+    return
+
+
+@app.cell(hide_code=True)
+def __(mo):
+    mo.md(
+        """
+        ---
+        ## Comparison: PyBIDS vs bids2table_compat
+
+        | Feature | PyBIDS | bids2table_compat |
+        |---------|--------|-------------------|
+        | Add custom entities | Config file required | Direct DataFrame access |
+        | When to add | Before indexing | Anytime |
+        | Flexibility | Schema patterns only | Any pandas operation |
+        | Query syntax | `.get()` | Same `.get()` |
+        | Complexity | Config files + regex | Simple Python code |
+
+        **Bottom line**: Custom entities are simpler and more flexible in bids2table_compat!
+        """
+    )
+    return
+
+
+@app.cell(hide_code=True)
+def __(mo):
+    mo.md(
+        """
+        ---
+        ## Best Practices
+
+        ### 1. Name Entities Clearly
+
+        ```python
+        # Good
+        layout.df['qc_visual_rating'] = ratings
+        layout.df['processing_batch_id'] = batch
+
+        # Avoid
+        layout.df['x'] = values  # What is x?
+        layout.df['status'] = status  # Status of what?
+        ```
+
+        ### 2. Document Custom Entities
+
+        ```python
+        layout.custom_entities = {
+            'qc_visual_rating': 'Manual QC rating (pass/fail/review)',
+            'processing_batch_id': 'Batch ID from processing pipeline',
+        }
+        ```
+
+        ### 3. Preserve Entity Types
+
+        ```python
+        layout.df['age'] = layout.df['age'].astype(int)
+        layout.df['qc_grade'] = layout.df['qc_grade'].astype('category')
+        ```
+
+        ### 4. Handle Missing Values
+
+        ```python
+        # Be explicit
+        layout.df['status'].fillna('pending', inplace=True)
+
+        # Or filter in queries
+        completed = layout.get(status='complete')  # Won't match NaN
+        ```
+        """
+    )
+    return
+
+
+@app.cell(hide_code=True)
+def __(mo):
+    mo.md(
+        """
+        ---
+        ## Summary
+
+        ✅ **Three ways to add custom entities**:
+        1. Direct DataFrame: `layout.df['entity'] = values`
+        2. Helper method: `layout.add_custom_entity('entity', values)`
+        3. From function: `layout.add_custom_entity('entity', compute_fn)`
+
+        ✅ **Query like standard entities**:
+        - `layout.get(custom_entity='value')`
+        - Combine with standard entities
+        - Use with any return_type
+
+        ✅ **Common patterns demonstrated**:
+        - File categorization
+        - Processing status tracking
+        - Metadata-based entities
+        - External data integration
+        - Entity renaming
+
+        ✅ **templateflow pattern works seamlessly**:
+        - Add custom entities as DataFrame columns
+        - Query naturally with `.get()`
+        - More flexible than PyBIDS config files
+
+        ---
+
+        💡 **No special implementation needed** - custom entities work out of the box!
+
+        📚 **See also**: `CUSTOM_ENTITIES_SUMMARY.md` for the templateflow use case
+        """
+    )
+    return
+
+
+if __name__ == "__main__":
+    app.run()
