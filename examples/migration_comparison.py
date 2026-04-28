@@ -16,7 +16,7 @@ def _(mo):
     This notebook demonstrates **the same operations** in four different approaches:
 
     1. **PyBIDS** - What you know and love (but slow)
-    2. **bids2table_compat** - Drop-in replacement (20x faster, same API)
+    2. **bids2table_compat** - Drop-in replacement (much faster, same API)
     3. **bids2table + pandas** - Native DataFrame approach (fastest, Pythonic)
     4. **bids2table + polars** - Native with Polars (fastest + lowest memory)
 
@@ -25,6 +25,18 @@ def _(mo):
     - **Best performance?** → Use `polars`
     - **Most familiar?** → Use `pandas`
     - **Not ready to migrate?** → Keep using PyBIDS (but it's slower)
+
+    ### 🎯 Decision Matrix
+
+    | Your Priority | Recommended Approach | Why |
+    |---------------|---------------------|-----|
+    | **Minimal code changes** | `bids2table_compat` | Change only the import, everything else stays the same |
+    | **Best performance** | `bids2table + polars` | Fastest queries, lowest memory usage, lazy evaluation |
+    | **Most familiar syntax** | `bids2table + pandas` | If you already know pandas, this is natural |
+    | **Large datasets (>10k files)** | `bids2table + polars` | Memory-efficient, handles big data better |
+    | **Integration with existing pandas code** | `bids2table + pandas` | Fits naturally into pandas workflows |
+    | **Just want it to work** | `bids2table_compat` | Drop-in replacement, no learning curve |
+
 
     ---
     """)
@@ -68,10 +80,8 @@ def _(dataset_path, mo):
     import numpy as np
     from bids import BIDSLayout as PyBIDSLayout
 
-    mo.md("### Approach 1: PyBIDS (Traditional)")
-
     # PyBIDS - slow but familiar
-    # Run 10 times to get reliable statistics
+    # Run 30 times to get reliable statistics
     pybids_times = []
     pybids_layout = None
     for _ in range(30):
@@ -85,6 +95,8 @@ def _(dataset_path, mo):
     pybids_time_std = np.std(pybids_times_trimmed)
 
     mo.md(f"""
+    ### Approach 1: PyBIDS (Traditional)
+
     ```python
     from bids import BIDSLayout
     layout = BIDSLayout('/path/to/dataset', validate=False)
@@ -96,16 +108,15 @@ def _(dataset_path, mo):
 
 @app.cell
 def _(dataset_path, mo, np, time):
-    mo.md("### Approach 2: bids2table_compat (Drop-in Replacement)")
-
     # bids2table_compat - fast, same API
-    # Run 10 times to get reliable statistics
+    # Run 30 times to get reliable statistics
+    # Use reset_database=True to disable caching for accurate benchmarking
     from bids2table_compat import BIDSLayout as CompatLayout
     compat_times = []
     compat_layout = None
     for _ in range(30):
         _start = time.time()
-        compat_layout = CompatLayout(str(dataset_path), validate=False)
+        compat_layout = CompatLayout(str(dataset_path), validate=False, reset_database=True)
         compat_times.append(time.time() - _start)
 
     # Remove best and worst times as outliers
@@ -114,6 +125,8 @@ def _(dataset_path, mo, np, time):
     compat_time_std = np.std(compat_times_trimmed)
 
     mo.md(f"""
+    ### Approach 2: bids2table_compat (Drop-in Replacement)
+
     ```python
     from bids2table_compat import BIDSLayout  # Just change the import!
     layout = BIDSLayout('/path/to/dataset', validate=False)
@@ -128,10 +141,8 @@ def _(dataset_path, mo, np, time):
     import bids2table as b2t
     import pandas as pd
 
-    mo.md("### Approach 3: bids2table + pandas (Native)")
-
     # bids2table + pandas - fast, DataFrame native
-    # Run 10 times to get reliable statistics
+    # Run 30 times to get reliable statistics
     pandas_times = []
     pandas_df = None
     for _ in range(30):
@@ -146,6 +157,8 @@ def _(dataset_path, mo, np, time):
     pandas_time_std = np.std(pandas_times_trimmed)
 
     mo.md(f"""
+    ### Approach 3: bids2table + pandas (Native)
+
     ```python
     import bids2table as b2t
     import pandas as pd
@@ -162,10 +175,8 @@ def _(dataset_path, mo, np, time):
 def _(b2t, dataset_path, mo, np, time):
     import polars as pl
 
-    mo.md("### Approach 4: bids2table + polars (Native + Fast)")
-
     # bids2table + polars - fastest, lowest memory
-    # Run 10 times to get reliable statistics
+    # Run 30 times to get reliable statistics
     polars_times = []
     polars_df = None
     for _ in range(30):
@@ -180,6 +191,8 @@ def _(b2t, dataset_path, mo, np, time):
     polars_time_std = np.std(polars_times_trimmed)
 
     mo.md(f"""
+    ### Approach 4: bids2table + polars (Native + Fast)
+
     ```python
     import bids2table as b2t
     import polars as pl
@@ -853,6 +866,8 @@ def _(mo):
 
 @app.cell
 def _(compat_layout, mo):
+    compat_layout.df.head(3)
+
     mo.md("""
     ### Approach 2: bids2table_compat
 
@@ -864,13 +879,13 @@ def _(compat_layout, mo):
 
     💡 **Direct DataFrame access** - leverage pandas operations when needed
     """)
-
-    compat_layout.df.head(3)
     return
 
 
 @app.cell
 def _(mo, pandas_df):
+    pandas_df.head(3)
+
     mo.md("""
     ### Approach 3: bids2table + pandas
 
@@ -883,12 +898,13 @@ def _(mo, pandas_df):
     💡 **Full pandas power** - use the entire pandas ecosystem
     """)
 
-    pandas_df.head(3)
     return
 
 
 @app.cell
 def _(mo, polars_df):
+    polars_df.head(3)
+
     mo.md("""
     ### Approach 4: bids2table + polars
 
@@ -901,7 +917,6 @@ def _(mo, polars_df):
     💡 **Lazy evaluation** - queries are optimized before execution
     """)
 
-    polars_df.head(3)
     return
 
 
@@ -910,17 +925,6 @@ def _(mo):
     mo.md("""
     ---
     ## Summary: Which Approach Should You Use?
-
-    ### 🎯 Decision Matrix
-
-    | Your Priority | Recommended Approach | Why |
-    |---------------|---------------------|-----|
-    | **Minimal code changes** | `bids2table_compat` | Change only the import, everything else stays the same |
-    | **Best performance** | `bids2table + polars` | Fastest queries, lowest memory usage, lazy evaluation |
-    | **Most familiar syntax** | `bids2table + pandas` | If you already know pandas, this is natural |
-    | **Large datasets (>10k files)** | `bids2table + polars` | Memory-efficient, handles big data better |
-    | **Integration with existing pandas code** | `bids2table + pandas` | Fits naturally into pandas workflows |
-    | **Just want it to work** | `bids2table_compat` | Drop-in replacement, no learning curve |
 
     ### 🚀 Migration Paths
 

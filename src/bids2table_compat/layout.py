@@ -36,6 +36,7 @@ class BIDSLayout:
         derivatives: Path(s) to derivative datasets to include
         cache_path: Path to parquet cache file (default: {root}/.bids2table_cache.parquet)
         database_path: Legacy parameter (ignored, use cache_path instead)
+        reset_database: If True, ignore cache and force re-indexing (useful for benchmarking)
         **kwargs: Additional arguments (currently ignored)
 
     Attributes:
@@ -50,12 +51,14 @@ class BIDSLayout:
         derivatives: Optional[Union[str, Path, List[Union[str, Path]]]] = None,
         cache_path: Optional[Path] = None,
         database_path: Optional[Path] = None,
+        reset_database: bool = False,
         **kwargs
     ):
         """Initialize BIDSLayout with dataset indexing."""
         import bids2table as b2t
 
         self.root = Path(root).absolute()
+        self.reset_database = reset_database
 
         # Handle legacy database_path parameter
         if database_path is not None and cache_path is None:
@@ -102,7 +105,8 @@ class BIDSLayout:
         """
         import bids2table as b2t
 
-        if self.cache_path.exists():
+        # If reset_database is True, skip cache and force re-index
+        if not self.reset_database and self.cache_path.exists():
             # Check if cache is stale (optional - could be expensive)
             # For now, trust the cache exists means it's valid
             try:
@@ -118,16 +122,17 @@ class BIDSLayout:
         # Create new index
         tab = b2t.index_dataset(str(self.root))
 
-        # Save cache
-        try:
-            self.cache_path.parent.mkdir(parents=True, exist_ok=True)
-            pq.write_table(tab, self.cache_path)
-        except Exception as e:
-            warnings.warn(
-                f"Failed to save cache to {self.cache_path}: {e}",
-                UserWarning,
-                stacklevel=3
-            )
+        # Save cache (unless reset_database is True, which implies benchmarking)
+        if not self.reset_database:
+            try:
+                self.cache_path.parent.mkdir(parents=True, exist_ok=True)
+                pq.write_table(tab, self.cache_path)
+            except Exception as e:
+                warnings.warn(
+                    f"Failed to save cache to {self.cache_path}: {e}",
+                    UserWarning,
+                    stacklevel=3
+                )
 
         return tab
 
