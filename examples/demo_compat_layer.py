@@ -33,15 +33,15 @@ def __():
     import marimo as mo
     from pathlib import Path
 
-    # Find the test dataset
+    # Find the test dataset - using ds114 (multi-session, multiple tasks)
     repo_root = Path.cwd().parent if Path.cwd().name == 'examples' else Path.cwd()
-    dataset_path = repo_root / 'datasets' / 'bids-examples' / 'ds001'
+    dataset_path = repo_root / 'datasets' / 'bids-examples' / 'ds114'
 
     if not dataset_path.exists():
         mo.md(f"⚠️ Dataset not found: {dataset_path}")
         mo.stop()
 
-    mo.md(f"✅ Using dataset: `{dataset_path.name}`")
+    mo.md(f"✅ Using dataset: `{dataset_path.name}` (multi-session, multi-task)")
     return Path, dataset_path, mo, repo_root
 
 
@@ -88,13 +88,16 @@ def __(mo):
 def __(layout, mo):
     subjects = layout.get_subjects()
     sessions = layout.get_sessions()
+    tasks = sorted(layout.df['task'].dropna().unique().tolist())
 
     mo.md(f"""
     **Subjects**: `{subjects[:5]}...` ({len(subjects)} total)
 
     **Sessions**: `{sessions if sessions else 'None (single-session dataset)'}`
+
+    **Tasks**: `{tasks}`
     """)
-    return sessions, subjects
+    return sessions, subjects, tasks
 
 
 @app.cell(hide_code=True)
@@ -217,7 +220,7 @@ def __(mo):
 
 
 @app.cell
-def __(layout, mo):
+def __(layout, mo, Path):
     # Get BIDSFile objects
     bids_files = layout.get(suffix='bold', return_type='file')
 
@@ -230,12 +233,14 @@ def __(layout, mo):
 
         **Found**: {len(bids_files)} BOLD files
 
-        **Example file**: `{example_file.path.split('/')[-1]}`
+        **Example file**: `{Path(example_file.path).name}`
 
         **Entities**: `{entities}`
         """)
     else:
-        mo.md("No BOLD files found in dataset")
+        example_file = None
+        entities = None
+        mo.md("⚠️ No BOLD files found in dataset")
     return bids_files, entities, example_file
 
 
@@ -254,7 +259,7 @@ def __(mo):
 
 @app.cell
 def __(bids_files, layout, mo):
-    if bids_files:
+    if bids_files and len(bids_files) > 0:
         metadata = layout.get_metadata(bids_files[0].path)
         metadata_keys = list(metadata.keys())
 
@@ -268,7 +273,10 @@ def __(bids_files, layout, mo):
 
         mo.md(md_text)
     else:
-        mo.md("No files to show metadata for")
+        md_text = "No files to show metadata for"
+        metadata = {}
+        metadata_keys = []
+        mo.md("⚠️ " + md_text)
     return md_text, metadata, metadata_keys
 
 

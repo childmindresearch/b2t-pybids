@@ -52,6 +52,9 @@ Develop a **drop-in compatibility layer** for bids2table that replicates PyBIDS'
 git clone --recursive https://github.com/nipreps/b2t-api-expand.git
 cd b2t-pybids
 
+# If already cloned, initialize submodules
+git submodule update --init --recursive
+
 # Install with uv (recommended)
 uv sync
 
@@ -149,111 +152,65 @@ good_files = layout.get(qc_grade='pass')
 
 ---
 
-## 📚 Documentation Guide
+## 📚 Documentation
 
-### Start Here: Understanding the Project
+### Essential Documents
 
 1. **[README.md](README.md)** ⭐ **YOU ARE HERE**
    - Project overview and quick start
-   - Navigation guide for all docs
+   - Installation and usage examples
    - Quick reference
 
-2. **[COMPLETE_ANALYSIS.md](COMPLETE_ANALYSIS.md)** ⭐ **READ THIS NEXT**
-   - Consolidated usage analysis of all 8 projects
-   - Method frequency and importance rankings
-   - Real-world usage patterns with code examples
-   - **Start here to understand what PyBIDS methods actually matter**
+2. **[LOGBOOK.md](LOGBOOK.md)** ⭐ **COMPLETE PROJECT HISTORY**
+   - Chronological development log
+   - Usage analysis (6 projects → 8 projects → 10 projects)
+   - Design decisions and rationale
+   - Implementation notes and status
+   - Bug fixes and updates
+   - All consolidated analysis and planning
 
-3. **[SUMMARY.md](SUMMARY.md)** 
-   - Executive overview of the entire project
+3. **[SUMMARY.md](SUMMARY.md)**
+   - Executive overview
    - Key findings and recommendations
    - Success metrics and deliverables
-   - Good for stakeholders and quick reference
 
-### Migration: Moving from PyBIDS to bids2table
-
-4. **[MIGRATION_GUIDE.md](MIGRATION_GUIDE.md)** ⭐ **ESSENTIAL FOR USERS**
+4. **[MIGRATION_GUIDE.md](MIGRATION_GUIDE.md)** ⭐ **FOR USERS**
    - Method-by-method migration instructions
-   - Three approaches for each method:
-     - Old (PyBIDS code)
-     - Compat layer (drop-in replacement)
-     - Native b2t (best performance)
-   - Advanced patterns (caching, derivatives, multi-dataset)
-   - Performance comparisons
-   - Testing strategies
+   - Three approaches: Old PyBIDS / Compat layer / Native b2t
+   - Advanced patterns and performance comparisons
 
-5. **[CUSTOM_ENTITIES_SUMMARY.md](CUSTOM_ENTITIES_SUMMARY.md)**
-   - Quick reference for custom entities
-   - Addresses templateflow developer concerns
-   - Shows how custom entities work seamlessly
+### Interactive Examples
 
-### Implementation: Building the Compatibility Layer
+5. **[examples/demo_compat_layer.py](examples/demo_compat_layer.py)** 📓
+   - Interactive notebook (uses ds114 - multi-session, multi-task)
+   - Run: `uv run marimo edit examples/demo_compat_layer.py`
+   - Shows initialization, queries, metadata access, caching
 
-6. **[IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md)** ⭐ **FOR DEVELOPERS**
-   - Detailed 4-week execution plan
-   - Architecture decisions and design principles
-   - Phased implementation approach
-   - Testing strategy and success criteria
-   - Risk assessment
-   - Timeline with milestones
+6. **[examples/demo_custom_entities.py](examples/demo_custom_entities.py)** 📓
+   - Custom entities guide (templateflow pattern)
+   - Run: `uv run marimo edit examples/demo_custom_entities.py`
+   - Three ways to add custom entities with examples
 
-7. **[IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md)**
-   - **Current progress** (Phase 1 MVP complete!)
-   - What's working, what's not yet done
-   - Test coverage and results  
-   - Known limitations
-   - Next steps for Phase 2
+### Quick Navigation
 
-### Reference Documents
+**New to the project?** Read in order:
+1. README.md (this file) → Overview
+2. SUMMARY.md → Big picture
+3. LOGBOOK.md → Full history and details
+4. MIGRATION_GUIDE.md → How to use it
 
-8. **[PYBIDS_USAGE_ANALYSIS.md](PYBIDS_USAGE_ANALYSIS.md)**
-   - Original analysis (6 projects)
-   - Detailed breakdown of first batch
-   - Historical reference
-
-9. **[UPDATED_ANALYSIS.md](UPDATED_ANALYSIS.md)**
-    - Analysis after adding nibabies, neurosynth, templateflow
-    - What changed with new data
-    - Validation of approach
-    - **Note**: Both analyses are now combined in COMPLETE_ANALYSIS.md
-
-### Interactive Examples (Marimo Notebooks)
-
-10. **[examples/demo_compat_layer.py](examples/demo_compat_layer.py)** 📓
-    - Interactive notebook showing basic features
-    - Run with: `uv run marimo edit examples/demo_compat_layer.py`
-    - Shows initialization, queries, metadata access, caching
-    - Compare compat layer vs native b2t approaches
-
-11. **[examples/demo_custom_entities.py](examples/demo_custom_entities.py)** 📓
-    - Interactive notebook for custom entities (templateflow pattern)
-    - Run with: `uv run marimo edit examples/demo_custom_entities.py`
-    - Three ways to add custom entities
-    - Common patterns: categorization, QC tracking, external data
-    - Best practices and real-world examples
-
----
-
-### 📖 Linear Reading Path
-
-**For Understanding the Problem** (read in order):
-1. **README.md** (this file) → Get oriented
-2. **SUMMARY.md** → Big picture and goals
-3. **COMPLETE_ANALYSIS.md** → What PyBIDS methods are actually used
-4. **MIGRATION_GUIDE.md** → How to migrate your code
-
-**For Implementing the Solution** (read in order):
-1. **IMPLEMENTATION_PLAN.md** → Strategy & architecture
-2. **IMPLEMENTATION_STATUS.md** → Current state & progress
-3. **Source code** in `src/bids2table_compat/` → Actual implementation
-4. **Tests** in `tests/test_compat/` → How it's tested
+**Want to contribute?** See:
+1. LOGBOOK.md → Design decisions and current status
+2. tests/test_compat/ → Test suite
+2. LOGBOOK.md → Analysis, design, implementation history
+3. tests/test_compat/ → Test suite
+4. src/bids2table_compat/ → Source code
 
 **For Quick Reference**:
 - Need to migrate code? → **MIGRATION_GUIDE.md**
-- Need custom entities? → **examples/demo_custom_entities.py** (interactive notebook)
+- Need custom entities? → **examples/demo_custom_entities.py**
+- Want complete history? → **LOGBOOK.md**
 - Want to see it working? → **examples/** (marimo notebooks)
-- Want implementation details? → **IMPLEMENTATION_PLAN.md**
-- Want current status? → **IMPLEMENTATION_STATUS.md**
 
 ---
 
@@ -387,12 +344,17 @@ b2t-pybids/
 
 ### Initialize Submodules
 
+**IMPORTANT**: The repository uses Git submodules for test datasets and analysis projects. You must initialize them before running tests or examples.
+
 ```bash
-# After cloning
+# If you already cloned without --recursive
 git submodule update --init --recursive
 
-# Or clone with submodules
+# Or clone with submodules from the start
 git clone --recursive https://github.com/nipreps/b2t-api-expand.git
+
+# Initialize only the datasets submodule (needed for tests/examples)
+git submodule update --init datasets/bids-examples
 ```
 
 ---
