@@ -330,11 +330,11 @@ def __(layout, mo):
 
     # Merge with layout (in real use, would do: layout.df = layout.df.merge(...))
     # For demo, just show the concept
-    mo.md(f"""
+    mo.md("""
     **Pattern**: Integrate external metadata
 
     **External data**:
-    {qc_data.to_markdown()}
+    """ + qc_data.to_markdown() + """
 
     **Then merge**: `layout.df = layout.df.merge(qc_data, on='sub', how='left')`
 
