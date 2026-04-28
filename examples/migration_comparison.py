@@ -52,8 +52,7 @@ def _():
     dataset_path = get_dataset_path()
 
     if not dataset_path.exists():
-        mo.md(f"⚠️ Dataset not found: {dataset_path}")
-        mo.stop()
+        raise RuntimeError(f"⚠️ Dataset not found: {dataset_path}")
 
     mo.md(f"✅ Using dataset: `{dataset_path.name}` (128 files, 16 subjects)")
     return dataset_path, mo
