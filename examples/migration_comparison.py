@@ -857,6 +857,12 @@ def _(compat_layout, mo):
     ### Approach 2: bids2table_compat
 
     The compat layer wraps a pandas DataFrame:
+
+    ```python
+    layout.df.head(3)
+    ```
+
+    💡 **Direct DataFrame access** - leverage pandas operations when needed
     """)
 
     compat_layout.df.head(3)
@@ -869,6 +875,12 @@ def _(mo, pandas_df):
     ### Approach 3: bids2table + pandas
 
     Direct access to the full DataFrame:
+
+    ```python
+    df.head(3)
+    ```
+
+    💡 **Full pandas power** - use the entire pandas ecosystem
     """)
 
     pandas_df.head(3)
@@ -881,6 +893,12 @@ def _(mo, polars_df):
     ### Approach 4: bids2table + polars
 
     Polars DataFrame with lazy evaluation:
+
+    ```python
+    df.head(3)
+    ```
+
+    💡 **Lazy evaluation** - queries are optimized before execution
     """)
 
     polars_df.head(3)
@@ -916,6 +934,19 @@ def _(mo):
 
     # Done! 20x faster, no other changes needed
     ```
+
+    **Supported methods in Path 1:**
+    - ✅ `layout.get(subject='01', suffix='T1w', return_type='filename')`
+    - ✅ `layout.get_subjects()`, `layout.get_sessions()`
+    - ✅ `layout.get_metadata(file_path)`
+    - ✅ `layout.get_entities()` - returns dict of entity values
+    - ✅ `layout.add_custom_entity(name, values)` - add custom columns
+    - ✅ Query sentinels: `Query.OPTIONAL`, `Query.NONE`, `Query.ANY`
+    - ✅ Access underlying DataFrame: `layout.df`
+    - ⚠️ **Not supported**: Database queries, graph operations, complex validators
+    - ⚠️ **Not supported**: `build_path()`, `parse_file_entities()` - use DataFrame operations instead
+
+    For most neuroimaging pipelines, the supported methods cover 95%+ of use cases.
 
     **Path 2: Gradual (over time)**
     1. Start with `bids2table_compat` (minimal changes)
