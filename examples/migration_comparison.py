@@ -198,6 +198,7 @@ def _(b2t, dataset_path, mo, np, time):
     import polars as pl
 
     tab = b2t.index_dataset('/path/to/dataset')
+    df = pl.from_arrow(polars_tab)
     ```
     ⏱️ **Indexing time**: {polars_time_mean:.3f}s ± {polars_time_std:.3f}s (n=30, min & max removed)
     """)
