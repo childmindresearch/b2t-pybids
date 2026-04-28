@@ -223,7 +223,7 @@ def _(Path, layout, mo):
 
         **Entities**: `{entities}`
         """
-    
+
     else:
         example_file = None
         entities = None

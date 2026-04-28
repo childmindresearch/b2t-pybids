@@ -2,7 +2,7 @@
 
 import marimo
 
-__generated_with = "0.9.14"
+__generated_with = "0.23.3"
 app = marimo.App(width="full")
 
 
@@ -40,14 +40,14 @@ def _():
 
     # Find test dataset
     repo_root = Path.cwd().parent if Path.cwd().name == 'examples' else Path.cwd()
-    dataset_path = repo_root / 'datasets' / 'bids-examples' / 'ds001'
+    dataset_path = repo_root / 'datasets' / 'bids-examples' / 'ds114'
 
     if not dataset_path.exists():
         mo.md(f"⚠️ Dataset not found: {dataset_path}")
         mo.stop()
 
     mo.md(f"✅ Using dataset: `{dataset_path.name}` (128 files, 16 subjects)")
-    return Path, dataset_path, mo, repo_root, warnings
+    return dataset_path, mo
 
 
 @app.cell(hide_code=True)
@@ -64,33 +64,22 @@ def _(mo):
 @app.cell
 def _(dataset_path, mo):
     import time
+    from bids import BIDSLayout as PyBIDSLayout
 
     mo.md("### Approach 1: PyBIDS (Traditional)")
 
     # PyBIDS - slow but familiar
     _start = time.time()
-    try:
-        from bids import BIDSLayout as PyBIDSLayout
-        pybids_layout = PyBIDSLayout(str(dataset_path), validate=False)
-        pybids_time = time.time() - _start
-        mo.md(f"""
-        ```python
-        from bids import BIDSLayout
-        layout = BIDSLayout('/path/to/dataset', validate=False)
-        ```
-        ⏱️ **Indexing time**: {pybids_time:.3f}s
-        """)
-    except ImportError:
-        pybids_layout = None
-        pybids_time = None
-        mo.md("""
-        ```python
-        from bids import BIDSLayout
-        layout = BIDSLayout('/path/to/dataset', validate=False)
-        ```
-        ⚠️ PyBIDS not installed (skip comparison)
-        """)
-    return PyBIDSLayout, pybids_layout, pybids_time, time
+    pybids_layout = PyBIDSLayout(str(dataset_path), validate=False)
+    pybids_time = time.time() - _start
+    mo.md(f"""
+    ```python
+    from bids import BIDSLayout
+    layout = BIDSLayout('/path/to/dataset', validate=False)
+    ```
+    ⏱️ **Indexing time**: {pybids_time:.3f}s
+    """)
+    return pybids_layout, pybids_time, time
 
 
 @app.cell
@@ -110,7 +99,7 @@ def _(dataset_path, mo, time):
     ```
     ⏱️ **Indexing time**: {compat_time:.3f}s
     """)
-    return CompatLayout, compat_layout, compat_time
+    return compat_layout, compat_time
 
 
 @app.cell
@@ -135,9 +124,8 @@ def _(dataset_path, mo, time):
     df = tab.to_pandas(types_mapper=pd.ArrowDtype)
     ```
     ⏱️ **Indexing time**: {pandas_time:.3f}s
-    📊 **Result**: pandas DataFrame with {len(pandas_df)} rows × {len(pandas_df.columns)} columns
     """)
-    return b2t, pandas_df, pandas_tab, pandas_time, pd
+    return b2t, pandas_df, pandas_time
 
 
 @app.cell
@@ -149,7 +137,7 @@ def _(b2t, dataset_path, mo, time):
     # bids2table + polars - fastest, lowest memory
     _start = time.time()
     polars_tab = b2t.index_dataset(str(dataset_path))
-    polars_df = polars_tab.to_polars()
+    polars_df = pl.from_arrow(polars_tab)
     polars_time = time.time() - _start
 
     mo.md(f"""
@@ -158,12 +146,10 @@ def _(b2t, dataset_path, mo, time):
     import polars as pl
 
     tab = b2t.index_dataset('/path/to/dataset')
-    df = tab.to_polars()
     ```
     ⏱️ **Indexing time**: {polars_time:.3f}s
-    📊 **Result**: polars DataFrame with {len(polars_df)} rows × {len(polars_df.columns)} columns
     """)
-    return pl, polars_df, polars_tab, polars_time
+    return pl, polars_df, polars_time
 
 
 @app.cell
@@ -175,16 +161,16 @@ def _(compat_time, mo, pandas_time, polars_time, pybids_time):
         speedup_pandas = pybids_time / pandas_time
         speedup_polars = pybids_time / polars_time
 
-        mo.md(f"""
+        bmark = f"""
         | Approach | Time | Speedup vs PyBIDS |
         |----------|------|-------------------|
         | PyBIDS | {pybids_time:.3f}s | 1x (baseline) |
         | bids2table_compat | {compat_time:.3f}s | **{speedup_compat:.1f}x faster** ⚡ |
         | bids2table + pandas | {pandas_time:.3f}s | **{speedup_pandas:.1f}x faster** ⚡ |
         | bids2table + polars | {polars_time:.3f}s | **{speedup_polars:.1f}x faster** ⚡ |
-        """)
+        """
     else:
-        mo.md(f"""
+        bmark = f"""
         | Approach | Time |
         |----------|------|
         | bids2table_compat | {compat_time:.3f}s |
@@ -192,8 +178,9 @@ def _(compat_time, mo, pandas_time, polars_time, pybids_time):
         | bids2table + polars | {polars_time:.3f}s |
 
         *PyBIDS not installed for comparison*
-        """)
-    return speedup_compat, speedup_pandas, speedup_polars
+        """
+    mo.md(bmark)
+    return
 
 
 @app.cell(hide_code=True)
@@ -211,18 +198,14 @@ def _(mo):
 def _(mo, pybids_layout):
     mo.md("### Approach 1: PyBIDS")
 
-    if pybids_layout:
-        pybids_t1w = pybids_layout.get(suffix='T1w', extension='.nii.gz', return_type='filename')
-        mo.md(f"""
-        ```python
-        files = layout.get(suffix='T1w', extension='.nii.gz', return_type='filename')
-        ```
-        **Found**: {len(pybids_t1w)} files
-        """)
-    else:
-        pybids_t1w = []
-        mo.md("*PyBIDS not installed*")
-    return (pybids_t1w,)
+    pybids_t1w = pybids_layout.get(suffix='T1w', extension='.nii.gz', return_type='filename')
+    mo.md(f"""
+    ```python
+    files = layout.get(suffix='T1w', extension='.nii.gz', return_type='filename')
+    ```
+    **Found**: {len(pybids_t1w)} files
+    """)
+    return
 
 
 @app.cell
@@ -262,30 +245,30 @@ def _(mo, pandas_df):
 
     💡 **Native pandas** - familiar boolean indexing
     """)
-    return (pandas_t1w,)
+    return
 
 
 @app.cell
-def _(mo, polars_df):
+def _(mo, pl, polars_df):
     mo.md("### Approach 4: bids2table + polars")
 
     polars_t1w = polars_df.filter(
-        (polars_df['suffix'] == 'T1w') &
-        (polars_df['ext'] == '.nii.gz')
+        (pl.col('suffix') == 'T1w') &
+        (pl.col('ext') == '.nii.gz')
     )['path'].to_list()
 
     mo.md(f"""
     ```python
     files = df.filter(
-        (df['suffix'] == 'T1w') &
-        (df['ext'] == '.nii.gz')
+        (pl.col('suffix') == 'T1w') &
+        (pl.col('ext') == '.nii.gz')
     )['path'].to_list()
     ```
     **Found**: {len(polars_t1w)} files
 
     💡 **Native polars** - lazy evaluation, fastest queries
     """)
-    return (polars_t1w,)
+    return
 
 
 @app.cell(hide_code=True)
@@ -303,28 +286,24 @@ def _(mo):
 def _(mo, pybids_layout):
     mo.md("### Approach 1: PyBIDS")
 
-    if pybids_layout:
-        pybids_bold = pybids_layout.get(
-            subject='01',
-            task='balloonanalogrisktask',
-            suffix='bold',
-            return_type='filename'
-        )
-        mo.md(f"""
-        ```python
-        files = layout.get(
-            subject='01',
-            task='balloonanalogrisktask',
-            suffix='bold',
-            return_type='filename'
-        )
-        ```
-        **Found**: {len(pybids_bold)} files
-        """)
-    else:
-        pybids_bold = []
-        mo.md("*PyBIDS not installed*")
-    return (pybids_bold,)
+    pybids_bold = pybids_layout.get(
+        subject='01',
+        task='linebisection',
+        suffix='bold',
+        return_type='filename'
+    )
+    mo.md(f"""
+    ```python
+    files = layout.get(
+        subject='01',
+        task='linebisection',
+        suffix='bold',
+        return_type='filename'
+    )
+    ```
+    **Found**: {len(pybids_bold)} files
+    """)
+    return
 
 
 @app.cell
@@ -333,7 +312,7 @@ def _(compat_layout, mo):
 
     compat_bold = compat_layout.get(
         subject='01',
-        task='balloonanalogrisktask',
+        task='linebisection',
         suffix='bold',
         return_type='filename'
     )
@@ -342,7 +321,7 @@ def _(compat_layout, mo):
     ```python
     files = layout.get(
         subject='01',
-        task='balloonanalogrisktask',
+        task='linebisection',
         suffix='bold',
         return_type='filename'
     )
@@ -351,7 +330,7 @@ def _(compat_layout, mo):
 
     ✅ **Exact same syntax**
     """)
-    return (compat_bold,)
+    return
 
 
 @app.cell
@@ -360,7 +339,7 @@ def _(mo, pandas_df):
 
     pandas_bold = pandas_df[
         (pandas_df['sub'] == '01') &
-        (pandas_df['task'] == 'balloonanalogrisktask') &
+        (pandas_df['task'] == 'linebisection') &
         (pandas_df['suffix'] == 'bold')
     ]['path'].tolist()
 
@@ -368,7 +347,7 @@ def _(mo, pandas_df):
     ```python
     files = df[
         (df['sub'] == '01') &
-        (df['task'] == 'balloonanalogrisktask') &
+        (df['task'] == 'linebisection') &
         (df['suffix'] == 'bold')
     ]['path'].tolist()
     ```
@@ -376,32 +355,32 @@ def _(mo, pandas_df):
 
     💡 Chain conditions with `&`
     """)
-    return (pandas_bold,)
+    return
 
 
 @app.cell
-def _(mo, polars_df):
+def _(mo, pl, polars_df):
     mo.md("### Approach 4: bids2table + polars")
 
     polars_bold = polars_df.filter(
-        (polars_df['sub'] == '01') &
-        (polars_df['task'] == 'balloonanalogrisktask') &
-        (polars_df['suffix'] == 'bold')
+        (pl.col('sub') == '01') &
+        (pl.col('task') == 'linebisection') &
+        (pl.col('suffix') == 'bold')
     )['path'].to_list()
 
     mo.md(f"""
     ```python
     files = df.filter(
-        (df['sub'] == '01') &
-        (df['task'] == 'balloonanalogrisktask') &
-        (df['suffix'] == 'bold')
+        (pl.col('sub') == '01') &
+        (pl.col('task') == 'linebisection') &
+        (pl.col('suffix') == 'bold')
     )['path'].to_list()
     ```
     **Found**: {len(polars_bold)} files
 
     💡 Use `.filter()` instead of boolean indexing
     """)
-    return (polars_bold,)
+    return
 
 
 @app.cell(hide_code=True)
@@ -419,22 +398,17 @@ def _(mo):
 def _(mo, pybids_layout):
     mo.md("### Approach 1: PyBIDS")
 
-    if pybids_layout:
-        pybids_subjects = pybids_layout.get_subjects()
-        pybids_tasks = pybids_layout.get_tasks()
-        mo.md(f"""
-        ```python
-        subjects = layout.get_subjects()
-        tasks = layout.get_tasks()
-        ```
-        **Subjects**: {len(pybids_subjects)} → `{pybids_subjects[:5]}...`
-        **Tasks**: {pybids_tasks}
-        """)
-    else:
-        pybids_subjects = []
-        pybids_tasks = []
-        mo.md("*PyBIDS not installed*")
-    return pybids_subjects, pybids_tasks
+    pybids_subjects = pybids_layout.get_subjects()
+    pybids_tasks = pybids_layout.get_tasks()
+    mo.md(f"""
+    ```python
+    subjects = layout.get_subjects()
+    tasks = layout.get_tasks()
+    ```
+    **Subjects**: {len(pybids_subjects)} → `{pybids_subjects[:5]}...`
+    **Tasks**: {pybids_tasks}
+    """)
+    return
 
 
 @app.cell
@@ -454,7 +428,7 @@ def _(compat_layout, mo):
 
     ✅ **Same helper methods**
     """)
-    return compat_subjects, compat_tasks
+    return
 
 
 @app.cell
@@ -474,7 +448,7 @@ def _(mo, pandas_df):
 
     💡 **Standard pandas operations** - `.unique()` on any column
     """)
-    return pandas_subjects, pandas_tasks
+    return
 
 
 @app.cell
@@ -494,7 +468,7 @@ def _(mo, polars_df):
 
     💡 **Polars syntax** - similar to pandas but optimized
     """)
-    return polars_subjects, polars_tasks
+    return
 
 
 @app.cell(hide_code=True)
@@ -512,18 +486,14 @@ def _(mo):
 def _(compat_t1w, mo, pybids_layout):
     mo.md("### Approach 1: PyBIDS")
 
-    if pybids_layout and compat_t1w:
-        pybids_meta = pybids_layout.get_metadata(compat_t1w[0])
-        mo.md(f"""
-        ```python
-        metadata = layout.get_metadata(file_path)
-        ```
-        **Keys**: {list(pybids_meta.keys())[:5] if pybids_meta else 'None'}...
-        """)
-    else:
-        pybids_meta = {}
-        mo.md("*PyBIDS not installed or no files found*")
-    return (pybids_meta,)
+    pybids_meta = pybids_layout.get_metadata(compat_t1w[0])
+    mo.md(f"""
+    ```python
+    metadata = layout.get_metadata(file_path)
+    ```
+    **Keys**: {list(pybids_meta.keys())[:5] if pybids_meta else 'None'}...
+    """)
+    return
 
 
 @app.cell
@@ -540,7 +510,7 @@ def _(compat_layout, compat_t1w, mo):
 
     ✅ **Same method, handles BIDS inheritance**
     """)
-    return (compat_meta,)
+    return
 
 
 @app.cell
@@ -558,7 +528,7 @@ def _(b2t, compat_t1w, dataset_path, mo):
 
     💡 **Direct function call** - no layout needed
     """)
-    return (pandas_meta,)
+    return
 
 
 @app.cell
@@ -576,7 +546,7 @@ def _(b2t, compat_t1w, dataset_path, mo):
 
     💡 **Same function** - metadata loading is DataFrame-agnostic
     """)
-    return (polars_meta,)
+    return
 
 
 @app.cell(hide_code=True)
@@ -594,30 +564,26 @@ def _(mo):
 def _(mo, pybids_layout):
     mo.md("### Approach 1: PyBIDS")
 
-    if pybids_layout:
-        from bids.layout import Query as PyQuery
-        pybids_optional = pybids_layout.get(
-            subject='01',
-            session=PyQuery.OPTIONAL,
-            suffix='bold',
-            return_type='filename'
-        )
-        mo.md(f"""
-        ```python
-        from bids.layout import Query
-        files = layout.get(
-            subject='01',
-            session=Query.OPTIONAL,  # Match files with or without session
-            suffix='bold',
-            return_type='filename'
-        )
-        ```
-        **Found**: {len(pybids_optional)} files
-        """)
-    else:
-        pybids_optional = []
-        mo.md("*PyBIDS not installed*")
-    return PyQuery, pybids_optional
+    from bids.layout import Query as PyQuery
+    pybids_optional = pybids_layout.get(
+        subject='01',
+        session=PyQuery.OPTIONAL,
+        suffix='bold',
+        return_type='filename'
+    )
+    mo.md(f"""
+    ```python
+    from bids.layout import Query
+    files = layout.get(
+        subject='01',
+        session=Query.OPTIONAL,  # Match files with or without session
+        suffix='bold',
+        return_type='filename'
+    )
+    ```
+    **Found**: {len(pybids_optional)} files
+    """)
+    return
 
 
 @app.cell
@@ -646,7 +612,7 @@ def _(compat_layout, mo):
 
     ✅ **Query sentinels work!**
     """)
-    return CompatQuery, compat_optional
+    return
 
 
 @app.cell
@@ -673,16 +639,16 @@ def _(mo, pandas_df):
 
     💡 **Just omit the filter** - simpler than Query.OPTIONAL!
     """)
-    return (pandas_optional,)
+    return
 
 
 @app.cell
-def _(mo, polars_df):
+def _(mo, pl, polars_df):
     mo.md("### Approach 4: bids2table + polars")
 
     polars_optional = polars_df.filter(
-        (polars_df['sub'] == '01') &
-        (polars_df['suffix'] == 'bold')
+        (pl.col('sub') == '01') &
+        (pl.col('suffix') == 'bold')
         # No session filter = all sessions match
     )['path'].to_list()
 
@@ -690,8 +656,8 @@ def _(mo, polars_df):
     ```python
     # Don't filter on session = matches all (including null)
     files = df.filter(
-        (df['sub'] == '01') &
-        (df['suffix'] == 'bold')
+        (pl.col('sub') == '01') &
+        (pl.col('suffix') == 'bold')
         # No session condition = optional!
     )['path'].to_list()
     ```
@@ -699,7 +665,7 @@ def _(mo, polars_df):
 
     💡 **Omit the filter** - natural in DataFrame queries
     """)
-    return (polars_optional,)
+    return
 
 
 @app.cell(hide_code=True)
@@ -737,7 +703,7 @@ def _(compat_layout, mo):
 
     ✅ **Helper method for custom entities**
     """)
-    return compat_qc_pass, qc_grades
+    return (qc_grades,)
 
 
 @app.cell
@@ -768,41 +734,41 @@ def _(mo, pandas_df, qc_grades):
 
     💡 **Native pandas column operations** - very flexible!
     """)
-    return pandas_df_custom, pandas_qc_pass
+    return
 
 
 @app.cell
-def _(mo, polars_df, qc_grades):
+def _(mo, pl, polars_df, qc_grades):
     mo.md("### Approach 4: bids2table + polars")
 
     # Add custom column with polars
     polars_df_custom = polars_df.with_columns(
-        polars_df['sub'].map_dict(qc_grades, default=None).alias('qc_grade')
+        pl.col('sub').replace(qc_grades).alias('qc_grade')
     )
 
     polars_qc_pass = polars_df_custom.filter(
-        (polars_df_custom['qc_grade'] == 'pass') &
-        (polars_df_custom['suffix'] == 'T1w')
+        (pl.col('qc_grade') == 'pass') & 
+        (pl.col('suffix') == 'T1w')
     )['path'].to_list()
 
     mo.md(f"""
     ```python
     # Add custom column with polars
     df = df.with_columns(
-        df['sub'].map_dict(qc_grades, default=None).alias('qc_grade')
+        pl.col('sub').replace(qc_grades).alias('qc_grade')
     )
 
     # Query with custom column
     files = df.filter(
-        (df['qc_grade'] == 'pass') &
-        (df['suffix'] == 'T1w')
+        (pl.col('qc_grade') == 'pass') &
+        (pl.col('suffix') == 'T1w')
     )['path'].to_list()
     ```
     **Found**: {len(polars_qc_pass)} T1w files with QC grade 'pass'
 
     💡 **Polars `.with_columns()`** - immutable, efficient transformations
     """)
-    return polars_df_custom, polars_qc_pass
+    return
 
 
 @app.cell(hide_code=True)
