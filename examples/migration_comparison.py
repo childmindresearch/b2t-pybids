@@ -38,9 +38,18 @@ def _():
     import warnings
     warnings.filterwarnings('ignore')
 
-    # Find test dataset
-    repo_root = Path.cwd().parent if Path.cwd().name == 'examples' else Path.cwd()
-    dataset_path = repo_root / 'datasets' / 'bids-examples' / 'ds114'
+    # Detect WASM/Pyodide environment and set dataset path accordingly
+    def get_dataset_path():
+        try:
+            import js  # Only available in Pyodide/WASM
+            # Running in browser - dataset served at ./data/ds114/
+            return Path("./data/ds114")
+        except ImportError:
+            # Running locally - use relative path
+            repo_root = Path.cwd().parent if Path.cwd().name == 'examples' else Path.cwd()
+            return repo_root / 'datasets' / 'bids-examples' / 'ds114'
+
+    dataset_path = get_dataset_path()
 
     if not dataset_path.exists():
         mo.md(f"⚠️ Dataset not found: {dataset_path}")

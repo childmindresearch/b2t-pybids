@@ -45,11 +45,20 @@ Develop a **drop-in compatibility layer** for bids2table that replicates PyBIDS'
 
 ## 🚀 Quick Start
 
+### 🌐 Try Online (No Installation Required)
+
+**[View the Interactive Migration Guide →](https://childmindresearch.github.io/b2t-pybids/)**
+
+The migration guide runs entirely in your browser with real BIDS data. You can:
+- Compare PyBIDS vs bids2table side-by-side
+- See code examples with live output
+- Explore different migration approaches (compat layer, pandas, polars)
+
 ### Installation
 
 ```bash
 # Clone with submodules
-git clone --recursive https://github.com/nipreps/b2t-api-expand.git
+git clone --recursive https://github.com/childmindresearch/b2t-pybids.git
 cd b2t-pybids
 
 # If already cloned, initialize submodules
@@ -62,16 +71,17 @@ uv sync
 pip install -e ".[dev]"
 ```
 
-### Try the Compatibility Layer
+### Try the Compatibility Layer Locally
 
 ```bash
 # Run marimo notebooks (interactive)
+uv run marimo edit examples/migration_comparison.py
 uv run marimo edit examples/demo_compat_layer.py
 uv run marimo edit examples/demo_custom_entities.py
 
 # Or run as scripts
+uv run marimo run examples/migration_comparison.py
 uv run marimo run examples/demo_compat_layer.py
-uv run marimo run examples/demo_custom_entities.py
 
 # Run tests
 uv run pytest tests/test_compat/ -v
