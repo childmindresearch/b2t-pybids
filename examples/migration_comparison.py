@@ -68,7 +68,6 @@ def _(mo):
     ## 1. Initialization & Indexing
 
     How to load and index a BIDS dataset.
-
     """)
     return
 
@@ -102,7 +101,7 @@ def _(dataset_path, mo):
     ```
     ⏱️ **Indexing time**: {pybids_time_mean:.3f}s ± {pybids_time_std:.3f}s (n=30, min & max removed)
     """)
-    return pybids_layout, pybids_time_mean, pybids_time_std, time, np
+    return np, pybids_layout, pybids_time_mean, pybids_time_std, time
 
 
 @app.cell
@@ -205,7 +204,17 @@ def _(b2t, dataset_path, mo, np, time):
 
 
 @app.cell
-def _(compat_time_mean, compat_time_std, mo, pandas_time_mean, pandas_time_std, polars_time_mean, polars_time_std, pybids_time_mean, pybids_time_std):
+def _(
+    compat_time_mean,
+    compat_time_std,
+    mo,
+    pandas_time_mean,
+    pandas_time_std,
+    polars_time_mean,
+    polars_time_std,
+    pybids_time_mean,
+    pybids_time_std,
+):
     mo.md("### Performance Comparison")
 
     if pybids_time_mean:
@@ -897,7 +906,6 @@ def _(mo, pandas_df):
 
     💡 **Full pandas power** - use the entire pandas ecosystem
     """)
-
     return
 
 
@@ -916,7 +924,6 @@ def _(mo, polars_df):
 
     💡 **Lazy evaluation** - queries are optimized before execution
     """)
-
     return
 
 

@@ -60,11 +60,12 @@ def _generate_index(
     template_file: Path,
     notebooks_data: List[dict] | None = None,
     apps_data: List[dict] | None = None,
+    output_filename: str = "index.html",
 ) -> None:
     """Generate an index.html file that lists all the notebooks."""
-    logger.info("Generating index.html")
+    logger.info(f"Generating {output_filename}")
 
-    index_path: Path = output_dir / "index.html"
+    index_path: Path = output_dir / output_filename
     output_dir.mkdir(parents=True, exist_ok=True)
 
     try:
@@ -80,7 +81,7 @@ def _generate_index(
 
         with open(index_path, "w") as f:
             f.write(rendered_html)
-        logger.info(f"Successfully generated index.html at {index_path}")
+        logger.info(f"Successfully generated {output_filename} at {index_path}")
 
     except IOError as e:
         logger.error(f"Error generating index.html: {e}")
@@ -132,6 +133,17 @@ def _copy_dataset(output_dir: Path) -> None:
     logger.info("Skipping dataset copy (static HTML uses dataset during build)")
 
 
+def _copy_comparison_table(output_dir: Path) -> None:
+    """Copy migration-comparison.html to output directory as index.html."""
+    comparison_file = Path("examples/migration-comparison.html")
+    if comparison_file.exists():
+        dest_file = output_dir / "index.html"
+        shutil.copy(comparison_file, dest_file)
+        logger.info(f"Copied {comparison_file} to {dest_file}")
+    else:
+        logger.warning(f"Comparison table not found at {comparison_file}")
+
+
 def main(
     output_dir: Union[str, Path] = "_site",
     template: Union[str, Path] = "templates/index.html.j2",
@@ -160,13 +172,17 @@ def main(
     # Copy BIDS dataset for browser access
     _copy_dataset(output_dir_path)
 
-    # Generate the index.html file
+    # Generate notebooks listing page
     _generate_index(
         output_dir=output_dir_path,
         notebooks_data=notebooks_data,
         apps_data=apps_data,
         template_file=template_file,
+        output_filename="notebooks.html",
     )
+
+    # Copy migration comparison table as the main index.html (home page)
+    _copy_comparison_table(output_dir_path)
 
     logger.info(f"Build completed successfully. Output directory: {output_dir_path}")
 

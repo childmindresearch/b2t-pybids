@@ -32,6 +32,10 @@
         }
         th:first-child {
             width: 15%;
+            position: sticky;
+            left: 0;
+            z-index: 11;
+            background-color: #2c5282;
         }
         th:not(:first-child) {
             width: 21.25%;
@@ -40,6 +44,12 @@
             padding: 10px;
             border: 1px solid #ddd;
             vertical-align: top;
+        }
+        td:first-child {
+            position: sticky;
+            left: 0;
+            background-color: inherit;
+            z-index: 1;
         }
         tr:nth-child(even) {
             background-color: #f9f9f9;
@@ -302,42 +312,6 @@ df = pl.concat([raw_df, deriv_df])</code></pre>
             </tr>
 
             <tr>
-                <td class="task-name">Caching</td>
-                <td>
-                    <pre><code>layout = BIDSLayout(
-    '/path/to/dataset',
-    database_path='/tmp/cache.db'
-)</code></pre>
-                </td>
-                <td>
-                    <pre><code>layout = BIDSLayout(
-    '/path/to/dataset',
-    cache_path='/tmp/cache.parquet'
-)</code></pre>
-                </td>
-                <td>
-                    <pre><code>import pyarrow.parquet as pq
-
-cache = '/tmp/cache.parquet'
-if Path(cache).exists():
-    tab = pq.read_table(cache)
-else:
-    tab = b2t.index_dataset('/path/to/dataset')
-    pq.write_table(tab, cache)
-df = tab.to_pandas(types_mapper=pd.ArrowDtype)</code></pre>
-                </td>
-                <td>
-                    <pre><code>cache = '/tmp/cache.parquet'
-if Path(cache).exists():
-    df = pl.read_parquet(cache)
-else:
-    tab = b2t.index_dataset('/path/to/dataset')
-    df = pl.from_arrow(tab)
-    df.write_parquet(cache)</code></pre>
-                </td>
-            </tr>
-
-            <tr>
                 <td class="task-name">Filter by List</td>
                 <td>
                     <pre><code>files = layout.get(
@@ -439,60 +413,6 @@ files = df.filter(
             </tr>
 
             <tr>
-                <td class="task-name">Count Files per Subject</td>
-                <td>
-                    <pre><code>for subject in layout.get_subjects():
-    n_files = len(layout.get(subject=subject))
-    print(f"{subject}: {n_files} files")</code></pre>
-                </td>
-                <td>
-                    <pre><code>for subject in layout.get_subjects():
-    n_files = len(layout.get(subject=subject))
-    print(f"{subject}: {n_files} files")</code></pre>
-                </td>
-                <td>
-                    <pre><code>counts = df.groupby('sub').size()
-for sub, n_files in counts.items():
-    print(f"{sub}: {n_files} files")</code></pre>
-                </td>
-                <td>
-                    <pre><code>counts = df.group_by('sub').count()
-for row in counts.iter_rows(named=True):
-    print(f"{row['sub']}: {row['count']} files")</code></pre>
-                </td>
-            </tr>
-
-            <tr>
-                <td class="task-name">Get First File</td>
-                <td>
-                    <pre><code>file = layout.get(
-    subject='01',
-    suffix='T1w',
-    return_type='filename'
-)[0]</code></pre>
-                </td>
-                <td>
-                    <pre><code>file = layout.get(
-    subject='01',
-    suffix='T1w',
-    return_type='filename'
-)[0]</code></pre>
-                </td>
-                <td>
-                    <pre><code>file = df[
-    (df['sub'] == '01') &
-    (df['suffix'] == 'T1w')
-]['path'].iloc[0]</code></pre>
-                </td>
-                <td>
-                    <pre><code>file = df.filter(
-    (pl.col('sub') == '01') &
-    (pl.col('suffix') == 'T1w')
-)['path'][0]</code></pre>
-                </td>
-            </tr>
-
-            <tr>
                 <td class="task-name">Check if Files Exist</td>
                 <td>
                     <pre><code>has_t1w = len(layout.get(
@@ -557,7 +477,7 @@ entities = parse_bids_entities(
     </table>
 
     <p style="text-align: center; margin-top: 30px; color: #666; font-size: 0.9em;">
-        See <a href="examples/migration_comparison.py" style="color: #2c5282;">migration_comparison.py</a> marimo notebook for executable examples
+        See <a href="notebooks.html" style="color: #2c5282;">interactive notebooks</a> for executable examples with real BIDS data
     </p>
 </body>
 </html>
