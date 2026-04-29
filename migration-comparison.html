@@ -9,30 +9,21 @@
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             margin: 20px;
             background-color: #f5f5f5;
-            line-height: 1.6;
         }
         h1 {
             text-align: center;
             color: #333;
-            margin-bottom: 10px;
-        }
-        .subtitle {
-            text-align: center;
-            color: #666;
-            margin-bottom: 30px;
-            font-style: italic;
         }
         table {
             width: 100%;
             border-collapse: collapse;
             background: white;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            margin-bottom: 30px;
         }
         th {
             background-color: #2c5282;
             color: white;
-            padding: 15px;
+            padding: 12px;
             text-align: left;
             font-weight: 600;
             position: sticky;
@@ -40,314 +31,384 @@
             z-index: 10;
         }
         th:first-child {
-            width: 20%;
+            width: 15%;
         }
         th:not(:first-child) {
-            width: 40%;
+            width: 21.25%;
         }
         td {
-            padding: 15px;
+            padding: 10px;
             border: 1px solid #ddd;
             vertical-align: top;
         }
         tr:nth-child(even) {
             background-color: #f9f9f9;
         }
-        tr:hover {
-            background-color: #f0f7ff;
-        }
         .task-name {
             font-weight: bold;
             color: #2c5282;
-            font-size: 1.05em;
+            font-size: 0.95em;
         }
         pre {
-            background-color: #f5f5f5;
-            padding: 12px;
-            border-radius: 4px;
+            background-color: #f8f8f8;
+            padding: 8px;
+            border-radius: 3px;
             overflow-x: auto;
-            margin: 8px 0;
+            margin: 0;
+            font-size: 0.85em;
             border-left: 3px solid #2c5282;
-            font-size: 0.9em;
         }
         code {
             font-family: 'Courier New', Courier, monospace;
-            color: #333;
-        }
-        .note {
-            background-color: #fff3cd;
-            border-left: 4px solid #ffc107;
-            padding: 10px;
-            margin-top: 10px;
-            font-size: 0.9em;
-            border-radius: 3px;
-        }
-        .note strong {
-            color: #856404;
-        }
-        .compat-badge {
-            display: inline-block;
-            background-color: #28a745;
-            color: white;
-            padding: 2px 8px;
-            border-radius: 3px;
-            font-size: 0.85em;
-            margin-left: 5px;
-        }
-        .complex-badge {
-            display: inline-block;
-            background-color: #dc3545;
-            color: white;
-            padding: 2px 8px;
-            border-radius: 3px;
-            font-size: 0.85em;
-            margin-left: 5px;
         }
     </style>
 </head>
 <body>
     <h1>PyBIDS → bids2table Migration Comparison</h1>
-    <p class="subtitle">Side-by-side implementation examples for common tasks</p>
 
     <table>
         <thead>
             <tr>
                 <th>Task</th>
-                <th>PyBIDS (Old)</th>
-                <th>bids2table (New)</th>
+                <th>PyBIDS</th>
+                <th>bids2table_compat</th>
+                <th>bids2table + pandas</th>
+                <th>bids2table + polars</th>
             </tr>
         </thead>
         <tbody>
             <tr>
-                <td class="task-name">Dataset Initialization</td>
+                <td class="task-name">Initialization</td>
                 <td>
-                    <pre><code>from bids.layout import BIDSLayout
+                    <pre><code>from bids import BIDSLayout
 
 layout = BIDSLayout(
     '/path/to/dataset',
     validate=False
-)
+)</code></pre>
+                </td>
+                <td>
+                    <pre><code>from bids2table_compat import BIDSLayout
 
-# With derivatives
 layout = BIDSLayout(
     '/path/to/dataset',
-    derivatives='/path/to/derivatives'
-)
-
-# With cache
-layout = BIDSLayout(
-    '/path/to/dataset',
-    database_path='/tmp/cache.db'
+    validate=False
 )</code></pre>
                 </td>
                 <td>
                     <pre><code>import bids2table as b2t
 import pandas as pd
-import pyarrow.parquet as pq
-from pathlib import Path
 
-# Index dataset
 tab = b2t.index_dataset('/path/to/dataset')
-df = tab.to_pandas(types_mapper=pd.ArrowDtype)
-
-# With parquet cache
-cache_path = Path('/tmp/dataset.parquet')
-if cache_path.exists():
-    tab = pq.read_table(cache_path)
-else:
-    tab = b2t.index_dataset('/path/to/dataset')
-    pq.write_table(tab, cache_path)
-
-df = tab.to_pandas(types_mapper=pd.ArrowDtype)
-
-# With derivatives
-import pyarrow as pa
-raw_tab = b2t.index_dataset('/path/to/dataset')
-deriv_tab = b2t.index_dataset('/path/to/derivatives')
-tab = pa.concat_tables([raw_tab, deriv_tab])
 df = tab.to_pandas(types_mapper=pd.ArrowDtype)</code></pre>
-                    <div class="note">
-                        <strong>Note:</strong> Indexing is ~20x faster than PyBIDS. Parquet cache loads ~15x faster than SQLite.
-                    </div>
+                </td>
+                <td>
+                    <pre><code>import bids2table as b2t
+import polars as pl
+
+tab = b2t.index_dataset('/path/to/dataset')
+df = pl.from_arrow(tab)</code></pre>
                 </td>
             </tr>
 
             <tr>
                 <td class="task-name">Query Files</td>
                 <td>
-                    <pre><code># Simple query
-files = layout.get(
-    return_type='filename',
-    subject='01',
+                    <pre><code>files = layout.get(
     suffix='T1w',
-    extension=['.nii', '.nii.gz']
-)
-
-# Multiple filters
-files = layout.get(
-    return_type='filename',
-    subject='01',
-    session='01',
-    datatype='func',
-    suffix='bold',
-    task='rest'
-)
-
-# Optional session
-from bids.layout import Query
-files = layout.get(
-    subject='01',
-    session=Query.OPTIONAL,
-    suffix='T1w'
-)
-
-# Get first file
-img = layout.get(
-    subject='01',
-    suffix='T1w'
-)[0]</code></pre>
+    extension='.nii.gz',
+    return_type='filename'
+)</code></pre>
                 </td>
                 <td>
-                    <pre><code># Simple query
-files = df[
-    (df['sub'] == '01') &
+                    <pre><code>files = layout.get(
+    suffix='T1w',
+    extension='.nii.gz',
+    return_type='filename'
+)</code></pre>
+                </td>
+                <td>
+                    <pre><code>files = df[
     (df['suffix'] == 'T1w') &
-    (df['ext'].isin(['.nii', '.nii.gz']))
-]['file_path'].tolist()
-
-# Multiple filters
-files = df[
-    (df['sub'] == '01') &
-    (df['ses'] == '01') &
-    (df['datatype'] == 'func') &
-    (df['suffix'] == 'bold') &
-    (df['task'] == 'rest')
-]['file_path'].tolist()
-
-# Optional session (allow null/missing)
-files = df[
-    (df['sub'] == '01') &
-    ((df['ses'] == '01') | (df['ses'].isna())) &
-    (df['suffix'] == 'T1w')
-]['file_path'].tolist()
-
-# Get first file
-img = df[
-    (df['sub'] == '01') &
-    (df['suffix'] == 'T1w')
-]['file_path'].iloc[0]
-
-# Or use .query() for complex filters
-files = df.query(
-    "sub == '01' and suffix == 'T1w'"
-)['file_path'].tolist()</code></pre>
-                    <div class="note">
-                        <strong>Note:</strong> DataFrame queries are ~50x faster for large result sets. Any pandas operation works.
-                    </div>
+    (df['ext'] == '.nii.gz')
+]['path'].tolist()</code></pre>
+                </td>
+                <td>
+                    <pre><code>files = df.filter(
+    (pl.col('suffix') == 'T1w') &
+    (pl.col('ext') == '.nii.gz')
+)['path'].to_list()</code></pre>
                 </td>
             </tr>
 
             <tr>
-                <td class="task-name">Get Metadata</td>
+                <td class="task-name">Multi-Entity Query</td>
                 <td>
-                    <pre><code># Get metadata for a file
-metadata = layout.get_metadata(file_path)
-
-# Access specific fields
-pe_dir = metadata.get('PhaseEncodingDirection')
-echo_time = metadata.get('EchoTime')
-tr = metadata.get('RepetitionTime')
-
-# Metadata is automatically inherited
-# from dataset/subject/session JSONs</code></pre>
+                    <pre><code>files = layout.get(
+    subject='01',
+    task='rest',
+    suffix='bold',
+    return_type='filename'
+)</code></pre>
                 </td>
                 <td>
-                    <pre><code>from bids2table import load_bids_metadata
-
-# Direct function call
-metadata = load_bids_metadata(
-    file_path,
-    dataset_root='/path/to/dataset'
-)
-
-# Access fields
-pe_dir = metadata.get('PhaseEncodingDirection')
-echo_time = metadata.get('EchoTime')
-tr = metadata.get('RepetitionTime')
-
-# Batch loading for multiple files
-files = df[df['suffix'] == 'bold']['file_path'].tolist()
-dataset_root = '/path/to/dataset'
-metadata_list = [
-    load_bids_metadata(f, dataset_root)
-    for f in files
-]</code></pre>
-                    <div class="note">
-                        <strong>Note:</strong> Respects BIDS inheritance rules identically to PyBIDS. Direct 1:1 replacement.
-                    </div>
+                    <pre><code>files = layout.get(
+    subject='01',
+    task='rest',
+    suffix='bold',
+    return_type='filename'
+)</code></pre>
+                </td>
+                <td>
+                    <pre><code>files = df[
+    (df['sub'] == '01') &
+    (df['task'] == 'rest') &
+    (df['suffix'] == 'bold')
+]['path'].tolist()</code></pre>
+                </td>
+                <td>
+                    <pre><code>files = df.filter(
+    (pl.col('sub') == '01') &
+    (pl.col('task') == 'rest') &
+    (pl.col('suffix') == 'bold')
+)['path'].to_list()</code></pre>
                 </td>
             </tr>
 
             <tr>
                 <td class="task-name">List Subjects</td>
                 <td>
-                    <pre><code># Get all subjects
-subjects = layout.get_subjects()
-# Returns: ['01', '02', '03', ...]
-
-# With filtering
-subjects = layout.get_subjects(
-    suffix='bold',
-    task='rest'
-)
-
-# Validate participant label
-if participant_label not in layout.get_subjects():
-    raise ValueError(
-        f"Subject {participant_label} not found"
-    )</code></pre>
+                    <pre><code>subjects = layout.get_subjects()</code></pre>
                 </td>
                 <td>
-                    <pre><code># Get all unique subjects
-subjects = df['sub'].dropna().unique().tolist()
-# Or sorted:
-subjects = sorted(df['sub'].dropna().unique())
-
-# With filtering
-subjects = df[
-    (df['suffix'] == 'bold') &
-    (df['task'] == 'rest')
-]['sub'].unique().tolist()
-
-# Validate participant
-if participant_label not in df['sub'].values:
-    raise ValueError(
-        f"Subject {participant_label} not found"
-    )
-
-# Count subjects
-n_subjects = df['sub'].nunique()</code></pre>
-                    <div class="note">
-                        <strong>Note:</strong> IDs stored without 'sub-' prefix (same as PyBIDS return value).
-                    </div>
+                    <pre><code>subjects = layout.get_subjects()</code></pre>
+                </td>
+                <td>
+                    <pre><code>subjects = df['sub'].dropna().unique().tolist()</code></pre>
+                </td>
+                <td>
+                    <pre><code>subjects = df['sub'].drop_nulls().unique().to_list()</code></pre>
                 </td>
             </tr>
 
             <tr>
-                <td class="task-name">List Sessions</td>
+                <td class="task-name">List Tasks</td>
                 <td>
-                    <pre><code># Get all sessions for a subject
-sessions = layout.get_sessions(subject='01')
-# Returns: ['01', '02', ...] or []
+                    <pre><code>tasks = layout.get_tasks()</code></pre>
+                </td>
+                <td>
+                    <pre><code>tasks = layout.get_entities()['task']</code></pre>
+                </td>
+                <td>
+                    <pre><code>tasks = df['task'].dropna().unique().tolist()</code></pre>
+                </td>
+                <td>
+                    <pre><code>tasks = df['task'].drop_nulls().unique().to_list()</code></pre>
+                </td>
+            </tr>
 
-# Get all sessions in dataset
-all_sessions = layout.get_sessions()
+            <tr>
+                <td class="task-name">Get Metadata</td>
+                <td>
+                    <pre><code>metadata = layout.get_metadata(file_path)</code></pre>
+                </td>
+                <td>
+                    <pre><code>metadata = layout.get_metadata(file_path)</code></pre>
+                </td>
+                <td>
+                    <pre><code>metadata = b2t.load_bids_metadata(
+    file_path,
+    dataset_root
+)</code></pre>
+                </td>
+                <td>
+                    <pre><code>metadata = b2t.load_bids_metadata(
+    file_path,
+    dataset_root
+)</code></pre>
+                </td>
+            </tr>
 
-# Check if dataset has sessions
-has_sessions = len(layout.get_sessions()) > 0
+            <tr>
+                <td class="task-name">Optional Entity</td>
+                <td>
+                    <pre><code>from bids.layout import Query
 
-# Iterate subject-session pairs
-for subject in layout.get_subjects():
+files = layout.get(
+    subject='01',
+    session=Query.OPTIONAL,
+    suffix='bold',
+    return_type='filename'
+)</code></pre>
+                </td>
+                <td>
+                    <pre><code>from bids2table_compat import Query
+
+files = layout.get(
+    subject='01',
+    session=Query.OPTIONAL,
+    suffix='bold',
+    return_type='filename'
+)</code></pre>
+                </td>
+                <td>
+                    <pre><code># Omit session filter = matches all
+
+files = df[
+    (df['sub'] == '01') &
+    (df['suffix'] == 'bold')
+]['path'].tolist()</code></pre>
+                </td>
+                <td>
+                    <pre><code># Omit session filter = matches all
+
+files = df.filter(
+    (pl.col('sub') == '01') &
+    (pl.col('suffix') == 'bold')
+)['path'].to_list()</code></pre>
+                </td>
+            </tr>
+
+            <tr>
+                <td class="task-name">Derivatives</td>
+                <td>
+                    <pre><code>layout = BIDSLayout(
+    '/path/to/dataset',
+    derivatives='/path/to/derivatives'
+)</code></pre>
+                </td>
+                <td>
+                    <pre><code>layout = BIDSLayout(
+    '/path/to/dataset',
+    derivatives='/path/to/derivatives'
+)</code></pre>
+                </td>
+                <td>
+                    <pre><code>import pyarrow as pa
+
+raw_tab = b2t.index_dataset('/path/to/dataset')
+deriv_tab = b2t.index_dataset('/path/to/derivatives')
+tab = pa.concat_tables([raw_tab, deriv_tab])
+df = tab.to_pandas(types_mapper=pd.ArrowDtype)</code></pre>
+                </td>
+                <td>
+                    <pre><code>raw_tab = b2t.index_dataset('/path/to/dataset')
+deriv_tab = b2t.index_dataset('/path/to/derivatives')
+
+raw_df = pl.from_arrow(raw_tab)
+deriv_df = pl.from_arrow(deriv_tab)
+df = pl.concat([raw_df, deriv_df])</code></pre>
+                </td>
+            </tr>
+
+            <tr>
+                <td class="task-name">Caching</td>
+                <td>
+                    <pre><code>layout = BIDSLayout(
+    '/path/to/dataset',
+    database_path='/tmp/cache.db'
+)</code></pre>
+                </td>
+                <td>
+                    <pre><code>layout = BIDSLayout(
+    '/path/to/dataset',
+    cache_path='/tmp/cache.parquet'
+)</code></pre>
+                </td>
+                <td>
+                    <pre><code>import pyarrow.parquet as pq
+
+cache = '/tmp/cache.parquet'
+if Path(cache).exists():
+    tab = pq.read_table(cache)
+else:
+    tab = b2t.index_dataset('/path/to/dataset')
+    pq.write_table(tab, cache)
+df = tab.to_pandas(types_mapper=pd.ArrowDtype)</code></pre>
+                </td>
+                <td>
+                    <pre><code>cache = '/tmp/cache.parquet'
+if Path(cache).exists():
+    df = pl.read_parquet(cache)
+else:
+    tab = b2t.index_dataset('/path/to/dataset')
+    df = pl.from_arrow(tab)
+    df.write_parquet(cache)</code></pre>
+                </td>
+            </tr>
+
+            <tr>
+                <td class="task-name">Filter by List</td>
+                <td>
+                    <pre><code>files = layout.get(
+    subject=['01', '02', '03'],
+    suffix='bold',
+    return_type='filename'
+)</code></pre>
+                </td>
+                <td>
+                    <pre><code>files = layout.get(
+    subject=['01', '02', '03'],
+    suffix='bold',
+    return_type='filename'
+)</code></pre>
+                </td>
+                <td>
+                    <pre><code>files = df[
+    (df['sub'].isin(['01', '02', '03'])) &
+    (df['suffix'] == 'bold')
+]['path'].tolist()</code></pre>
+                </td>
+                <td>
+                    <pre><code>files = df.filter(
+    (pl.col('sub').is_in(['01', '02', '03'])) &
+    (pl.col('suffix') == 'bold')
+)['path'].to_list()</code></pre>
+                </td>
+            </tr>
+
+            <tr>
+                <td class="task-name">Custom Entities</td>
+                <td>
+                    <pre><code># No native support
+# Must track separately</code></pre>
+                </td>
+                <td>
+                    <pre><code>qc_grades = {'01': 'pass', '02': 'fail', ...}
+layout.add_custom_entity('qc_grade', qc_grades)
+
+files = layout.get(
+    qc_grade='pass',
+    suffix='T1w',
+    return_type='filename'
+)</code></pre>
+                </td>
+                <td>
+                    <pre><code>qc_grades = {'01': 'pass', '02': 'fail', ...}
+df['qc_grade'] = df['sub'].map(qc_grades)
+
+files = df[
+    (df['qc_grade'] == 'pass') &
+    (df['suffix'] == 'T1w')
+]['path'].tolist()</code></pre>
+                </td>
+                <td>
+                    <pre><code>qc_grades = {'01': 'pass', '02': 'fail', ...}
+df = df.with_columns(
+    pl.col('sub').replace(qc_grades).alias('qc_grade')
+)
+
+files = df.filter(
+    (pl.col('qc_grade') == 'pass') &
+    (pl.col('suffix') == 'T1w')
+)['path'].to_list()</code></pre>
+                </td>
+            </tr>
+
+            <tr>
+                <td class="task-name">Subject-Session Iteration</td>
+                <td>
+                    <pre><code>for subject in layout.get_subjects():
     sessions = layout.get_sessions(
         subject=subject
     ) or [None]
@@ -355,367 +416,148 @@ for subject in layout.get_subjects():
         process(subject, session)</code></pre>
                 </td>
                 <td>
-                    <pre><code># Get sessions for a subject
-sessions = df[
-    df['sub'] == '01'
-]['ses'].dropna().unique().tolist()
-
-# Get all sessions in dataset
-all_sessions = df['ses'].dropna().unique().tolist()
-
-# Check if dataset has sessions
-has_sessions = df['ses'].notna().any()
-
-# Iterate subject-session pairs
-for subject in df['sub'].unique():
-    subject_df = df[df['sub'] == subject]
-    sessions = subject_df['ses'].dropna().unique().tolist() or [None]
+                    <pre><code>for subject in layout.get_subjects():
+    sessions = layout.get_sessions(
+        subject=subject
+    ) or [None]
     for session in sessions:
-        process(subject, session)
-
-# More efficient: groupby
-for (sub, ses), group in df.groupby(['sub', 'ses'], dropna=False):
+        process(subject, session)</code></pre>
+                </td>
+                <td>
+                    <pre><code>for (sub, ses), group in df.groupby(
+    ['sub', 'ses'],
+    dropna=False
+):
     process(sub, ses)</code></pre>
-                    <div class="note">
-                        <strong>Note:</strong> Use groupby for efficient iteration over subject-session combinations.
-                    </div>
+                </td>
+                <td>
+                    <pre><code>for (sub, ses), group in df.group_by(
+    ['sub', 'ses']
+):
+    process(sub, ses)</code></pre>
                 </td>
             </tr>
 
             <tr>
-                <td class="task-name">Parse Entities</td>
+                <td class="task-name">Count Files per Subject</td>
                 <td>
-                    <pre><code># Get entities from file path
-bids_file = layout.get_file(file_path)
-entities = bids_file.get_entities()
-# Returns: {
-#   'subject': '01',
-#   'session': '01',
-#   'run': 1,
-#   'suffix': 'bold',
-#   ...
-# }
+                    <pre><code>for subject in layout.get_subjects():
+    n_files = len(layout.get(subject=subject))
+    print(f"{subject}: {n_files} files")</code></pre>
+                </td>
+                <td>
+                    <pre><code>for subject in layout.get_subjects():
+    n_files = len(layout.get(subject=subject))
+    print(f"{subject}: {n_files} files")</code></pre>
+                </td>
+                <td>
+                    <pre><code>counts = df.groupby('sub').size()
+for sub, n_files in counts.items():
+    print(f"{sub}: {n_files} files")</code></pre>
+                </td>
+                <td>
+                    <pre><code>counts = df.group_by('sub').count()
+for row in counts.iter_rows(named=True):
+    print(f"{row['sub']}: {row['count']} files")</code></pre>
+                </td>
+            </tr>
 
-# Group files by shared entities
-from collections import defaultdict
-groups = defaultdict(list)
-for f in files:
-    entities = layout.get_file(f).get_entities()
-    key = (
-        entities.get('session'),
-        entities.get('acquisition')
-    )
-    groups[key].append(f)</code></pre>
+            <tr>
+                <td class="task-name">Get First File</td>
+                <td>
+                    <pre><code>file = layout.get(
+    subject='01',
+    suffix='T1w',
+    return_type='filename'
+)[0]</code></pre>
+                </td>
+                <td>
+                    <pre><code>file = layout.get(
+    subject='01',
+    suffix='T1w',
+    return_type='filename'
+)[0]</code></pre>
+                </td>
+                <td>
+                    <pre><code>file = df[
+    (df['sub'] == '01') &
+    (df['suffix'] == 'T1w')
+]['path'].iloc[0]</code></pre>
+                </td>
+                <td>
+                    <pre><code>file = df.filter(
+    (pl.col('sub') == '01') &
+    (pl.col('suffix') == 'T1w')
+)['path'][0]</code></pre>
+                </td>
+            </tr>
+
+            <tr>
+                <td class="task-name">Check if Files Exist</td>
+                <td>
+                    <pre><code>has_t1w = len(layout.get(
+    subject='01',
+    suffix='T1w'
+)) > 0</code></pre>
+                </td>
+                <td>
+                    <pre><code>has_t1w = len(layout.get(
+    subject='01',
+    suffix='T1w'
+)) > 0</code></pre>
+                </td>
+                <td>
+                    <pre><code>has_t1w = (
+    (df['sub'] == '01') &
+    (df['suffix'] == 'T1w')
+).any()</code></pre>
+                </td>
+                <td>
+                    <pre><code>has_t1w = df.filter(
+    (pl.col('sub') == '01') &
+    (pl.col('suffix') == 'T1w')
+).height > 0</code></pre>
+                </td>
+            </tr>
+
+            <tr>
+                <td class="task-name">Parse Entities from Path</td>
+                <td>
+                    <pre><code>entities = layout.parse_file_entities(
+    '/path/to/sub-01_task-rest_bold.nii.gz'
+)
+# Returns: {'subject': '01', 'task': 'rest', ...}</code></pre>
                 </td>
                 <td>
                     <pre><code>from bids2table import parse_bids_entities
 
-# Direct function call (no layout needed!)
-entities = parse_bids_entities(file_path)
-# Returns: {
-#   'sub': '01',
-#   'ses': '01',
-#   'run': 1,
-#   'suffix': 'bold',
-#   ...
-# }
-
-# Batch entity extraction
-files = ['/path/to/file1.nii.gz', '/path/to/file2.nii.gz']
-entities_list = [parse_bids_entities(f) for f in files]
-
-# Group files by entities (using DataFrame)
-# Entities are already in DataFrame columns!
-for (ses, acq), group in df.groupby(['ses', 'acq']):
-    files = group['file_path'].tolist()
-    process(files)</code></pre>
-                    <div class="note">
-                        <strong>Note:</strong> Standalone function, no layout needed. Entity keys differ: 'subject' → 'sub', 'session' → 'ses'.
-                    </div>
-                </td>
-            </tr>
-
-            <tr>
-                <td class="task-name">Get Fieldmaps <span class="complex-badge">COMPLEX</span></td>
-                <td>
-                    <pre><code># Get fieldmap for a target scan
-fmap = layout.get_fieldmap(
-    target_file,
-    return_list=True
+entities = parse_bids_entities(
+    '/path/to/sub-01_task-rest_bold.nii.gz'
 )
-# Returns: [
-#   {
-#     'fmap': path,
-#     'type': 'epi',
-#     'metadata': {...}
-#   },
-#   ...
-# ]
-
-# Single fieldmap
-fmap_dict = layout.get_fieldmap(dwi_file)
-fmap_path = fmap_dict['fmap']
-fmap_type = fmap_dict['type']
-# type: 'epi', 'phasediff', 'phase', 'fieldmap'</code></pre>
+# Returns: {'sub': '01', 'task': 'rest', ...}</code></pre>
                 </td>
                 <td>
-                    <pre><code># RECOMMENDATION: Use compat layer
-from bids2table.compat import BIDSLayout
+                    <pre><code>from bids2table import parse_bids_entities
 
-layout = BIDSLayout('/path/to/dataset')
-fmap = layout.get_fieldmap(target_file, return_list=True)
-
-# Native implementation requires:
-# - Parsing IntendedFor relative paths
-# - Matching B0FieldSource identifiers
-# - Entity-based matching (session, acq, etc.)
-# - Determining fieldmap type
-
-# See full manual implementation in
-# MIGRATION_GUIDE.md section 7</code></pre>
-                    <div class="note">
-                        <strong>Note:</strong> Complex BIDS fieldmap association logic. Use compat layer unless implementing custom matching rules.
-                    </div>
-                </td>
-            </tr>
-
-            <tr>
-                <td class="task-name">Build Path</td>
-                <td>
-                    <pre><code># Build BIDS-compliant path
-path = layout.build_path(
-    entities={
-        'subject': '01',
-        'suffix': 'bold',
-        'extension': '.nii.gz'
-    },
-    pattern='sub-{subject}/func/sub-{subject}_task-{task}_bold.{extension}',
-    validate=False
-)</code></pre>
-                </td>
-                <td>
-                    <pre><code>from bids2table import format_bids_path
-
-# Direct function call
-entities = {
-    'sub': '01',
-    'task': 'rest',
-    'suffix': 'bold',
-    'ext': '.nii.gz'
-}
-pattern = 'sub-{sub}/func/sub-{sub}_task-{task}_{suffix}{ext}'
-path = format_bids_path(entities, pattern)
-
-# Or use default BIDS patterns (if supported)
-path = format_bids_path(entities)</code></pre>
-                    <div class="note">
-                        <strong>Note:</strong> Entity keys differ: 'subject' → 'sub', 'extension' → 'ext'. Rarely used in practice.
-                    </div>
-                </td>
-            </tr>
-
-            <tr>
-                <td class="task-name">niworkflows collect_data()</td>
-                <td>
-                    <pre><code>from niworkflows.utils.bids import collect_data
-
-queries = {
-    'bold': {
-        'datatype': 'func',
-        'suffix': 'bold'
-    },
-    't1w': {
-        'datatype': 'anat',
-        'suffix': 'T1w'
-    },
-    't2w': {
-        'datatype': 'anat',
-        'suffix': 'T2w'
-    },
-}
-
-subj_data = collect_data(
-    layout,
-    participant_label,
-    queries
-)[0]
-# Returns: {
-#   'bold': [files...],
-#   't1w': [files...],
-#   ...
-# }</code></pre>
-                </td>
-                <td>
-                    <pre><code>def collect_data_b2t(df, subject, queries):
-    """
-    Collect data for a subject based on queries.
-
-    Args:
-        df: bids2table DataFrame
-        subject: Subject ID
-        queries: Dict of {data_type: entity_filters}
-
-    Returns:
-        Dict of {data_type: [file_paths]}
-    """
-    result = {}
-    subject_df = df[df['sub'] == subject]
-
-    for data_type, filters in queries.items():
-        query_df = subject_df.copy()
-        for key, value in filters.items():
-            if key in query_df.columns:
-                query_df = query_df[query_df[key] == value]
-        result[data_type] = query_df['file_path'].tolist()
-
-    return result
-
-# Usage
-queries = {
-    'bold': {'datatype': 'func', 'suffix': 'bold'},
-    't1w': {'datatype': 'anat', 'suffix': 'T1w'},
-}
-subj_data = collect_data_b2t(df, '01', queries)</code></pre>
-                    <div class="note">
-                        <strong>Note:</strong> Simple helper function. Can be extended with session/run grouping logic as needed.
-                    </div>
-                </td>
-            </tr>
-
-            <tr>
-                <td class="task-name">Performance Caching</td>
-                <td>
-                    <pre><code># PyBIDS uses SQLite database cache
-layout = BIDSLayout(
-    '/data',
-    database_path='/tmp/cache.db'
+entities = parse_bids_entities(
+    '/path/to/sub-01_task-rest_bold.nii.gz'
 )
-# Subsequent runs reuse cache
-
-# Initial indexing: ~45s (ds000201)
-# Cache load time: ~3s
-# Query 100 files: ~0.5s</code></pre>
+# Returns: {'sub': '01', 'task': 'rest', ...}</code></pre>
                 </td>
                 <td>
-                    <pre><code>import pyarrow.parquet as pq
-from pathlib import Path
+                    <pre><code>from bids2table import parse_bids_entities
 
-def get_cached_layout(dataset_path, cache_path=None):
-    """Load or create cached index."""
-    if cache_path is None:
-        cache_path = Path(dataset_path) / '.bids2table_cache.parquet'
-
-    if cache_path.exists():
-        tab = pq.read_table(cache_path)
-    else:
-        tab = b2t.index_dataset(dataset_path)
-        pq.write_table(tab, cache_path)
-
-    return tab.to_pandas(types_mapper=pd.ArrowDtype)
-
-# Usage
-df = get_cached_layout('/data/bids_dataset')
-
-# Initial indexing: ~2s (ds000201)
-# Cache load time: ~0.2s
-# Query 100 files: ~0.01s</code></pre>
-                    <div class="note">
-                        <strong>Performance:</strong> Indexing ~20x faster, cache loading ~15x faster, queries ~50x faster than PyBIDS.
-                    </div>
+entities = parse_bids_entities(
+    '/path/to/sub-01_task-rest_bold.nii.gz'
+)
+# Returns: {'sub': '01', 'task': 'rest', ...}</code></pre>
                 </td>
             </tr>
         </tbody>
     </table>
 
-    <h2 style="margin-top: 40px; color: #2c5282;">Migration Paths</h2>
-
-    <table style="margin-top: 20px;">
-        <thead>
-            <tr>
-                <th>Approach</th>
-                <th>Time Required</th>
-                <th>When to Use</th>
-            </tr>
-        </thead>
-        <tbody>
-            <tr>
-                <td class="task-name">Compat Layer <span class="compat-badge">EASIEST</span></td>
-                <td>
-                    <pre><code># Change imports only (1-2 hours)
-from bids2table.compat import BIDSLayout
-
-# Rest of code stays the same!
-layout = BIDSLayout('/path/to/dataset')
-files = layout.get(subject='01', suffix='T1w')</code></pre>
-                </td>
-                <td>
-                    <div class="note">
-                        Quick migration with minimal code changes. Drop-in replacement for most PyBIDS functionality. Good for testing before full refactor.
-                    </div>
-                </td>
-            </tr>
-            <tr>
-                <td class="task-name">Native b2t</td>
-                <td>
-                    <pre><code># Full refactor (1-2 days)
-import bids2table as b2t
-import pandas as pd
-
-tab = b2t.index_dataset('/path/to/dataset')
-df = tab.to_pandas(types_mapper=pd.ArrowDtype)
-
-# Query with pandas
-files = df[
-    (df['sub'] == '01') &
-    (df['suffix'] == 'T1w')
-]['file_path'].tolist()</code></pre>
-                </td>
-                <td>
-                    <div class="note">
-                        Best performance and flexibility. Full pandas power for complex queries. Recommended for new code and performance-critical applications.
-                    </div>
-                </td>
-            </tr>
-            <tr>
-                <td class="task-name">Hybrid</td>
-                <td>
-                    <pre><code># Mix both approaches
-import bids2table as b2t
-from bids2table.compat import BIDSLayout
-
-# Native for simple queries
-tab = b2t.index_dataset('/path/to/dataset')
-df = tab.to_pandas(types_mapper=pd.ArrowDtype)
-files = df[df['suffix'] == 'bold']['file_path'].tolist()
-
-# Compat for complex operations
-layout = BIDSLayout('/path/to/dataset')
-fmap = layout.get_fieldmap(target_file)</code></pre>
-                </td>
-                <td>
-                    <div class="note">
-                        Best of both worlds. Use native b2t for performance-critical queries, compat layer for complex operations like fieldmap matching.
-                    </div>
-                </td>
-            </tr>
-        </tbody>
-    </table>
-
-    <div style="margin-top: 40px; padding: 20px; background-color: #e7f3ff; border-left: 5px solid #2c5282; border-radius: 5px;">
-        <h3 style="margin-top: 0; color: #2c5282;">Key Takeaways</h3>
-        <ul style="margin-bottom: 0;">
-            <li><strong>Indexing:</strong> bids2table is ~20x faster than PyBIDS</li>
-            <li><strong>Caching:</strong> Parquet cache loads ~15x faster than SQLite</li>
-            <li><strong>Queries:</strong> DataFrame operations are ~50x faster for large result sets</li>
-            <li><strong>Migration:</strong> Start with compat layer, refactor to native b2t for best performance</li>
-            <li><strong>Complex ops:</strong> Use compat layer for fieldmap matching until native implementation available</li>
-        </ul>
-    </div>
-
-    <p style="text-align: center; margin-top: 40px; color: #666; font-size: 0.9em;">
-        For detailed documentation and examples, see
-        <a href="MIGRATION_GUIDE.md" style="color: #2c5282;">MIGRATION_GUIDE.md</a> and
-        <a href="examples/migration_comparison.py" style="color: #2c5282;">migration_comparison.py</a>
+    <p style="text-align: center; margin-top: 30px; color: #666; font-size: 0.9em;">
+        See <a href="examples/migration_comparison.py" style="color: #2c5282;">migration_comparison.py</a> marimo notebook for executable examples
     </p>
 </body>
 </html>
